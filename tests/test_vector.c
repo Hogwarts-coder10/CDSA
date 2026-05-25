@@ -14,6 +14,9 @@ int main() {
 
   printf("%d\n", *(int *)front_vector(vec));
   printf("%d\n", *(int *)back_vector(vec));
+
+  printf("Size: %zu\n", size_vector(vec));
+  printf("Capacity: %zu\n", capacity_vector(vec));
   pop_vector(vec);
   free_vector(vec);
 

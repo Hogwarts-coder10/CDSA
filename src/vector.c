@@ -59,3 +59,7 @@ void *back_vector(Vector *vec) {
 
   return (char *)vec->data + ((vec->size - 1) * vec->elem_size);
 }
+
+size_t size_vector(Vector *vec) { return vec->size; }
+
+size_t capacity_vector(Vector *vec) { return vec->capacity; }

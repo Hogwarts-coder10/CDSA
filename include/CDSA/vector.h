@@ -17,4 +17,7 @@ void free_vector(Vector *vec);
 void pop_vector(Vector *vec);
 void *front_vector(Vector *vec);
 void *back_vector(Vector *vec);
+size_t size_vector(Vector *vec);
+size_t capacity_vector(Vector *vec);
+
 #endif
