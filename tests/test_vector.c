@@ -12,6 +12,9 @@ int main() {
     printf("%d\n", *(int *)get_vector(vec, i));
   }
 
+  printf("%d\n", *(int *)front_vector(vec));
+  printf("%d\n", *(int *)back_vector(vec));
+  pop_vector(vec);
   free_vector(vec);
 
   return 0;

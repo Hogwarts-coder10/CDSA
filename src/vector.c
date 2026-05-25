@@ -37,3 +37,25 @@ void free_vector(Vector *vec) {
   free(vec->data);
   free(vec);
 }
+
+void pop_vector(Vector *vec) {
+  if (vec->size > 0) {
+    vec->size--;
+  }
+}
+
+void *front_vector(Vector *vec) {
+  if (vec->size == 0) {
+    return NULL;
+  }
+
+  return vec->data;
+}
+
+void *back_vector(Vector *vec) {
+  if (vec->size == 0) {
+    return NULL;
+  }
+
+  return (char *)vec->data + ((vec->size - 1) * vec->elem_size);
+}
