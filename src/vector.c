@@ -1,4 +1,5 @@
 #include "CDSA/vector.h"
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -77,3 +78,13 @@ void set_vector(Vector *vec, size_t index, void *elem) {
 
   memcpy(target, elem, vec->elem_size);
 }
+
+void clear_vector(Vector *vec) {
+  if (vec == NULL) {
+    return;
+  }
+
+  vec->size = 0;
+}
+
+bool is_empty_vector(Vector *vec) { return vec->size == 0; }

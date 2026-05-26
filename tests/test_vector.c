@@ -28,6 +28,12 @@ int main() {
   int val = 42;
   set_vector(vec, 2, &val);
   printf("%d\n", *(int *)get_vector(vec, 2));
+
+  printf("Before: %zu\n", size_vector(vec));
+  clear_vector(vec);
+  printf("After: %zu\n", size_vector(vec));
+  printf("Capacity: %zu\n", capacity_vector(vec));
+
   free_vector(vec);
   return 0;
 }
