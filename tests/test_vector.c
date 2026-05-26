@@ -18,7 +18,16 @@ int main() {
   printf("Size: %zu\n", size_vector(vec));
   printf("Capacity: %zu\n", capacity_vector(vec));
   pop_vector(vec);
-  free_vector(vec);
 
+  int *x = get_vector(vec, 999);
+
+  if (x == NULL) {
+    printf("Out of bounds!\n");
+  }
+
+  int val = 42;
+  set_vector(vec, 2, &val);
+  printf("%d\n", *(int *)get_vector(vec, 2));
+  free_vector(vec);
   return 0;
 }

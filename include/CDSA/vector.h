@@ -19,5 +19,6 @@ void *front_vector(Vector *vec);
 void *back_vector(Vector *vec);
 size_t size_vector(Vector *vec);
 size_t capacity_vector(Vector *vec);
+void set_vector(Vector *vec, size_t index, void *elem);
 
 #endif

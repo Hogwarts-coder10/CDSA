@@ -30,6 +30,10 @@ void push_vector(Vector *vec, void *elem) {
 }
 
 void *get_vector(Vector *vec, size_t index) {
+  if (index >= vec->size) {
+    return NULL;
+  }
+
   return (char *)vec->data + (index * vec->elem_size);
 }
 
@@ -63,3 +67,13 @@ void *back_vector(Vector *vec) {
 size_t size_vector(Vector *vec) { return vec->size; }
 
 size_t capacity_vector(Vector *vec) { return vec->capacity; }
+
+void set_vector(Vector *vec, size_t index, void *elem) {
+  if (index >= vec->size) {
+    return;
+  }
+
+  void *target = (char *)vec->data + (index * vec->elem_size);
+
+  memcpy(target, elem, vec->elem_size);
+}
