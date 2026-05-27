@@ -7,6 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_library(cdsa
     src/vector.c
+    src/kstring.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -16,6 +17,14 @@ add_executable(test_vector
 )
 
 target_link_libraries(test_vector cdsa)
+
+add_executable(test_kstring
+    tests/test_kstring.c
+)
+
+target_link_libraries(test_kstring
+    PRIVATE cdsa
+)
 
 target_compile_options(cdsa PRIVATE
     -Wall
