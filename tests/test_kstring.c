@@ -9,6 +9,12 @@ int main(void) {
 
   printf("String: '%s'\n", c_str_kstring(str));
 
+  append_kstring(str, "Hello");
+  append_kstring(str, " ");
+  append_kstring(str, "World");
+
+  printf("%s\n", c_str_kstring(str));
+
   free_kstring(str);
 
   return 0;
