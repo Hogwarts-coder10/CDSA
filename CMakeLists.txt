@@ -8,6 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_library(cdsa
     src/vector.c
     src/kstring.c
+    src/linkedlist.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -23,6 +24,14 @@ add_executable(test_kstring
 )
 
 target_link_libraries(test_kstring
+    PRIVATE cdsa
+)
+
+add_executable(test_linkedlist
+    tests/test_linkedlist.c
+)
+
+target_link_libraries(test_linkedlist
     PRIVATE cdsa
 )
 
