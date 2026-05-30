@@ -18,10 +18,17 @@ LinkedList *create_linkedlist(void);
 
 void free_linkedlist(LinkedList *list);
 
-void push_front(LinkedList *list, int value);
+void push_front_linkedlist(LinkedList *list, int value);
 
 size_t size_linkedlist(LinkedList *list);
 
 bool is_empty_linkedlist(LinkedList *list);
 
+int front_linkedlist(LinkedList *list);
+
+void pop_front_linkedlist(LinkedList *list);
+
+void clear_linkedlist(LinkedList *list);
+
+void print_linkedlist(LinkedList *list);
 #endif
