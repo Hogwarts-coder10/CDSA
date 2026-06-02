@@ -7,7 +7,7 @@ Core Data Structures library written in C.
 - Generic dynamic vector
 - int-based LinkedList
 - Generic Stack
-- KString (reimplementation of Strings)
+- KString (Dynamic String Implementation)
 - Modular architecture
 - CMake build system
 - Valgrind-tested memory safety
