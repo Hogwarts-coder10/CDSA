@@ -9,6 +9,7 @@ add_library(cdsa
     src/vector.c
     src/kstring.c
     src/linkedlist.c
+    src/stack.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -33,6 +34,14 @@ add_executable(test_linkedlist
 
 target_link_libraries(test_linkedlist
     PRIVATE cdsa
+)
+
+add_executable(test_stack
+    tests/test_stack.c
+)
+
+target_link_libraries(test_stack
+  PRIVATE cdsa
 )
 
 target_compile_options(cdsa PRIVATE
