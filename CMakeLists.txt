@@ -10,6 +10,7 @@ add_library(cdsa
     src/kstring.c
     src/linkedlist.c
     src/stack.c
+    src/hashmap.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -41,6 +42,13 @@ add_executable(test_stack
 )
 
 target_link_libraries(test_stack
+  PRIVATE cdsa
+)
+
+add_executable(test_hashmap
+  tests/test_hashmap.c
+)
+target_link_libraries(test_hashmap
   PRIVATE cdsa
 )
 
