@@ -40,3 +40,14 @@ void insert_hashmap(HashMap *map, const char *key, void *value) {
   map->entries[index].value = value;
   map->size++;
 }
+
+void print_hashmap(HashMap *map) {
+  for (size_t i = 0; i < map->capacity; i++) {
+
+    if (map->entries[i].key != NULL) {
+
+      printf("[%zu] %s -> %d\n", i, map->entries[i].key,
+             *(int *)map->entries[i].value);
+    }
+  }
+}

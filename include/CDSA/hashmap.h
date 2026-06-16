@@ -22,5 +22,5 @@ void insert_hashmap(HashMap *map, const char *key, void *value);
 void *get_hashmap(HashMap *map, const char *key);
 bool contains_hashmap(HashMap *map, const char *key);
 void remove_hashmap(HashMap *map, const char *key);
-
+void print_hashmap(HashMap *map);
 #endif
