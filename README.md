@@ -8,6 +8,7 @@ Core Data Structures library written in C.
 - int-based LinkedList
 - Generic Stack
 - KString (Dynamic String Implementation)
+- HashMap (Generic)
 - Modular architecture
 - CMake build system
 - Valgrind-tested memory safety
