@@ -11,6 +11,7 @@ add_library(cdsa
     src/linkedlist.c
     src/stack.c
     src/hashmap.c
+    src/ringbuffer.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -51,6 +52,14 @@ add_executable(test_hashmap
 target_link_libraries(test_hashmap
   PRIVATE cdsa
 )
+
+add_executable(test_ringbuffer
+  tests/test_ringbuffer.c
+)
+target_link_libraries(test_ringbuffer
+  PRIVATE cdsa
+)
+
 
 target_compile_options(cdsa PRIVATE
     -Wall
