@@ -10,6 +10,7 @@ Core Data Structures library written in C.
 - KString (Dynamic String Implementation)
 - HashMap (Generic)
 - RingBuffer (Circular Queue) (Generic)
+- Queue
 - Modular architecture
 - CMake build system
 - Valgrind-tested memory safety
