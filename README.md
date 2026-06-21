@@ -11,6 +11,7 @@ Core Data Structures library written in C.
 - HashMap (Generic)
 - RingBuffer (Circular Queue) (Generic)
 - Queue
+- Deque
 - Modular architecture
 - CMake build system
 - Valgrind-tested memory safety
