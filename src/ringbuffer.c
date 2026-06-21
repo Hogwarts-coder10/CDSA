@@ -69,3 +69,40 @@ void *front_ringbuffer(RingBuffer *rb) {
 
   return (char *)rb->data + (rb->head * rb->elem_size);
 }
+
+// --- Deque Operations (Double-Ended) ---
+
+bool push_front_ringbuffer(RingBuffer *rb, void *elem) {
+  if (is_full_ringbuffer(rb)) {
+    return false;
+  }
+
+  // REVERSE MAGIC: Move head backwards, wrapping to the end if it hits 0
+  rb->head = (rb->head + rb->capacity - 1) % rb->capacity;
+
+  void *target = (char *)rb->data + (rb->head * rb->elem_size);
+  memcpy(target, elem, rb->elem_size);
+
+  rb->size++;
+  return true;
+}
+
+void pop_back_ringbuffer(RingBuffer *rb) {
+  if (is_empty_ringbuffer(rb)) {
+    return;
+  }
+
+  // REVERSE MAGIC: Move tail backwards, wrapping around
+  rb->tail = (rb->tail + rb->capacity - 1) % rb->capacity;
+  rb->size--;
+}
+
+void *back_ringbuffer(RingBuffer *rb) {
+  if (is_empty_ringbuffer(rb)) {
+    return NULL;
+  }
+
+  // The "back" element is always one step behind the current tail
+  size_t last_idx = (rb->tail + rb->capacity - 1) % rb->capacity;
+  return (char *)rb->data + (last_idx * rb->elem_size);
+}

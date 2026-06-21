@@ -13,6 +13,7 @@ add_library(cdsa
     src/hashmap.c
     src/ringbuffer.c
     src/queue.c
+    src/deque.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -67,6 +68,14 @@ add_executable(test_queue
 )
 target_link_libraries(test_queue
   PRIVATE  cdsa
+)
+
+add_executable(test_deque
+  tests/test_deque.c
+)
+
+target_link_libraries(test_deque
+  PRIVATE cdsa
 )
 
 target_compile_options(cdsa PRIVATE
