@@ -12,6 +12,7 @@ Core Data Structures library written in C.
 - RingBuffer (Circular Queue) (Generic)
 - Queue
 - Deque
+- SkipList (for sorted sets)
 - Modular architecture
 - CMake build system
 - Valgrind-tested memory safety
