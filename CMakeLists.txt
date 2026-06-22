@@ -14,6 +14,7 @@ add_library(cdsa
     src/ringbuffer.c
     src/queue.c
     src/deque.c
+    src/skiplist.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -75,6 +76,14 @@ add_executable(test_deque
 )
 
 target_link_libraries(test_deque
+  PRIVATE cdsa
+)
+
+add_executable(test_skiplist
+  tests/test_skiplist.c
+)
+
+target_link_libraries(test_skiplist
   PRIVATE cdsa
 )
 
