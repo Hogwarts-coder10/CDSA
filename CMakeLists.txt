@@ -15,6 +15,7 @@ add_library(cdsa
     src/queue.c
     src/deque.c
     src/skiplist.c
+    src/art.c
 )
 
 target_include_directories(cdsa PUBLIC include)
@@ -84,6 +85,14 @@ add_executable(test_skiplist
 )
 
 target_link_libraries(test_skiplist
+  PRIVATE cdsa
+)
+
+add_executable(test_art
+  tests/test_art.c
+)
+
+target_link_libraries(test_art
   PRIVATE cdsa
 )
 
