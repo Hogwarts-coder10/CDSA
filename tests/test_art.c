@@ -1,38 +1,48 @@
 #include "CDSA/art.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 int main() {
-  printf("🌲 Starting Adaptive Radix Tree Tests...\n\n");
+  printf("🌲 Starting Node48 Stress Test...\n\n");
 
   ArtTree *tree = create_art();
 
-  // 1. Insert 5 keys that share the exact same first letter 'a'
-  // This will force the root node (which starts as Node4) to upgrade to Node16!
-  printf("[*] Inserting Data (Forcing Node4 -> Node16 Upgrade)...\n");
-  insert_art(tree, "apple", "Data A");
-  insert_art(tree, "ant", "Data B");
-  insert_art(tree, "axe", "Data C");
-  insert_art(tree, "arc", "Data D");
+  // We need to insert 17 words that start with DIFFERENT letters.
+  // This will force the root node to hold 17 children,
+  // triggering the upgrades: Node4 -> Node16 -> Node48!
 
-  // --> AT THIS EXACT MOMENT, THE ROOT IS FULL (4 items) <--
+  char *words[] = {
+      "Apple", "Banana",    "Cherry", "Date",      "Elderberry", "Fig",
+      "Grape", "Honeydew",  "Ice",    "Jackfruit", "Kiwi",       "Lemon",
+      "Mango", "Nectarine", "Orange", "Papaya",    "Quince" // <-- The 17th
+                                                            // word! BOOM!
+  };
 
-  insert_art(tree, "ape", "Data E"); // Boom! Upgrades to Node16!
+  printf("[*] Inserting 17 distinct keys to force Node48 upgrade...\n");
+  for (int i = 0; i < 17; i++) {
+    insert_art(tree, words[i], "Data");
+    printf("Inserted: %-12s | Tree Size: %zu\n", words[i], tree->size);
+  }
 
-  printf("Total Keys in Database: %zu (Expected: 5)\n\n", tree->size);
+  printf("\n✅ Insertions complete. Root node should now be a NODE48!\n\n");
 
-  // 2. Test Searching
-  printf("[*] Testing Search...\n");
-  char *result = (char *)search_art(tree, "axe");
-  printf("Search 'axe': %s (Expected: Data C)\n", result ? result : "NULL");
+  // 2. Test O(1) Hashmap Searching
+  printf("[*] Testing Node48 O(1) Hashmap Lookups...\n");
 
-  result = (char *)search_art(tree, "ape");
-  printf("Search 'ape': %s (Expected: Data E)\n", result ? result : "NULL");
+  char *res1 = (char *)search_art(tree, "Kiwi");
+  printf("Search 'Kiwi':   %s (Expected: Data)\n", res1 ? res1 : "NULL");
 
-  result = (char *)search_art(tree, "alien");
-  printf("Search 'alien': %s (Expected: NULL)\n\n", result ? result : "NULL");
+  char *res2 = (char *)search_art(tree, "Apple");
+  printf("Search 'Apple':  %s (Expected: Data)\n", res2 ? res2 : "NULL");
 
-  // 3. Dismantle the Tree
-  printf("[*] Freeing Tree...\n");
+  char *res3 = (char *)search_art(tree, "Quince");
+  printf("Search 'Quince': %s (Expected: Data)\n", res3 ? res3 : "NULL");
+
+  char *res4 = (char *)search_art(tree, "Zebra");
+  printf("Search 'Zebra':  %s (Expected: NULL)\n\n", res4 ? res4 : "NULL");
+
+  // 3. Test Teardown (Will hit our new NODE48 free loop)
+  printf("[*] Freeing Tree (Testing Node48 Teardown)...\n");
   free_art(tree);
   printf("✅ Tree completely dismantled!\n");
 

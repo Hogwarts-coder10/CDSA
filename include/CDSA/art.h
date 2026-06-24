@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum { NODE4, NODE16, LEAF_NODE } NodeType;
+typedef enum { NODE4, NODE16, NODE48, NODE256, LEAF_NODE } NodeType;
 
 typedef struct {
   NodeType type;
@@ -28,6 +28,22 @@ typedef struct {
   uint8_t keys[16];
   void *children[16];
 } Node16;
+
+typedef struct {
+  NodeHeader header;
+
+  /* The 256-byte Lookup Map.
+   Every index corresponds to an ASCII character.
+   Valued at 255 if empty, or 0-47 pointing to the slot in the children array.
+  */
+
+  uint8_t child_index[256];
+
+  // Compressed array of actual pointers (saving upto 1.6KB per Node)
+  void *children[48];
+
+  uint8_t num_children;
+} Node48;
 
 // LEAF_NODE (ART = Adaptive Radix Tree (Trie))
 

@@ -1,4 +1,5 @@
 #include "CDSA/art.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,17 @@ static Node4 *alloc_node4() {
 static Node16 *alloc_node16() {
   Node16 *node = calloc(1, sizeof(Node16));
   node->header.type = NODE16;
+  node->num_children = 0;
+  return node;
+}
+
+static Node48 *alloc_node48() {
+  Node48 *node = calloc(1, sizeof(Node48));
+  node->header.type = NODE48;
+
+  // Setting all indices to '255'(empty)
+  memset(node->child_index, 255, sizeof(node->child_index));
+
   node->num_children = 0;
   return node;
 }
@@ -57,6 +69,29 @@ static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
   return new_node;
 }
 
+static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
+  Node48 *new_node = alloc_node48();
+
+  // Copy the header
+  new_node->header = old_node->header;
+  new_node->header.type = NODE48;
+
+  // Copy the children and their routing keys
+  new_node->num_children = old_node->num_children;
+  for (int i = 0; i < old_node->num_children; i++) {
+    uint8_t key_char = old_node->keys[i];
+
+    // Put the pointer in the condensed array
+    new_node->children[i] = old_node->children[i];
+
+    // Tell the 256-byte map where to find it!
+    new_node->child_index[key_char] = i;
+  }
+
+  free(old_node);
+  return new_node;
+}
+
 // Internal Helper: Finding a child pointer in Node4
 static void **find_child_node4(Node4 *n, uint8_t c) {
   for (int i = 0; i < n->num_children; i++) {
@@ -77,6 +112,15 @@ static void **find_child_node16(Node16 *n, uint8_t c) {
   }
 
   return NULL;
+}
+
+static void **find_child_node48(Node48 *n, uint8_t c) {
+  uint8_t index = n->child_index[c];
+
+  if (index == 255)
+    return NULL;
+
+  return &n->children[index];
 }
 
 static void free_node(void *node) {
@@ -103,6 +147,16 @@ static void free_node(void *node) {
 
   else if (header->type == NODE16) {
     Node16 *n = (Node16 *)node;
+
+    for (int i = 0; i < n->num_children; i++) {
+      free_node(n->children[i]);
+    }
+
+    free(n);
+  }
+
+  else if (header->type == NODE48) {
+    Node48 *n = (Node48 *)node;
 
     for (int i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
@@ -216,7 +270,9 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
           return true;
         }
       }
-    } else if (header->type == NODE16) {
+    }
+
+    else if (header->type == NODE16) {
       Node16 *n = (Node16 *)*current_ptr;
       next_ptr = find_child_node16(n, c);
 
@@ -229,7 +285,45 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
           return true;
         }
         // (Node16 -> Node48 upgrade logic will go here in Milestone 2!)
+        else {
+          Node48 *new_node = upgrade_node16_to_node48(n);
+          *current_ptr = new_node;
+
+          // insert our Node48
+          uint8_t new_index = new_node->num_children;
+          new_node->children[new_index] = alloc_leaf(key, value);
+          new_node->child_index[c] = new_index;
+          new_node->num_children++;
+
+          tree->size++;
+          return true;
+        }
       }
+    }
+
+    else if (header->type == NODE48) {
+      Node48 *n = (Node48 *)*current_ptr;
+      next_ptr = find_child_node48(n, c);
+
+      if (next_ptr == NULL) {
+        if (n->num_children < 48) {
+          // THE HASHMAP MAGIC:
+          // 1. Get the next available slot in the compressed array
+          uint8_t new_index = n->num_children;
+
+          n->children[new_index] = alloc_leaf(key, value);
+
+          n->child_index[c] = new_index;
+
+          n->num_children++;
+          tree->size++;
+          return true;
+        }
+      }
+    }
+
+    else {
+      return false;
     }
 
     // Move down to the next level
@@ -276,13 +370,30 @@ void *search_art(ArtTree *tree, const char *key) {
           break;
         }
       }
-    } else if (header->type == NODE16) {
+    }
+
+    else if (header->type == NODE16) {
       Node16 *n = (Node16 *)current;
       for (int i = 0; i < n->num_children; i++) {
         if (n->keys[i] == c) {
           next = n->children[i];
           break;
         }
+      }
+    }
+
+    else if (header->type == NODE48) {
+      Node48 *n = (Node48 *)current;
+
+      // O(1) direct look up in the 256 byte hashmap
+      uint8_t index = n->child_index[c];
+
+      if (index != 255) {
+        next = n->children[index];
+      }
+
+      else {
+        next = NULL;
       }
     }
 
