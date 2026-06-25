@@ -13,7 +13,7 @@ Core Data Structures library written in C.
 - Queue
 - Deque
 - SkipList (for sorted sets)
-- ART (Adaptive Radix Tree) (Supported upto Node4, Node16 and Node48)
+- ART (Adaptive Radix Tree) (Supported upto Node4, Node16, Node48 and Node256)
 - Modular architecture
 - CMake build system
 - Valgrind-tested memory safety
