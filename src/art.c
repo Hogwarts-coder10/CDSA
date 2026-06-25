@@ -31,6 +31,13 @@ static Node48 *alloc_node48() {
   return node;
 }
 
+static Node256 *alloc_node256() {
+  Node256 *node = calloc(1, sizeof(Node256));
+  node->header.type = NODE256;
+  node->num_children = 0;
+  return node;
+}
+
 static char *safe_strdup(const char *s) {
   size_t len = strlen(s) + 1;
   char *dup = malloc(len);
@@ -92,6 +99,28 @@ static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
   return new_node;
 }
 
+static Node256 *upgrade_node48_to_node256(Node48 *old_node) {
+  Node256 *new_node = alloc_node256();
+
+  // Copy the header
+  new_node->header = old_node->header;
+  new_node->header.type = NODE256;
+  new_node->num_children = old_node->num_children;
+
+  // Unpack the hashmap to an array
+  for (int i = 0; i < 256; i++) {
+    uint8_t new_index = old_node->child_index[i];
+
+    if (new_index != 255) { // if the hashmap is not empty
+      new_node->children[i] = old_node->children[new_index];
+    }
+  }
+
+  free(old_node);
+
+  return new_node;
+}
+
 // Internal Helper: Finding a child pointer in Node4
 static void **find_child_node4(Node4 *n, uint8_t c) {
   for (int i = 0; i < n->num_children; i++) {
@@ -121,6 +150,11 @@ static void **find_child_node48(Node48 *n, uint8_t c) {
     return NULL;
 
   return &n->children[index];
+}
+
+static void **find_child_node256(Node256 *n, uint8_t c) {
+  // direct memory access
+  return &n->children[c];
 }
 
 static void free_node(void *node) {
@@ -160,6 +194,18 @@ static void free_node(void *node) {
 
     for (int i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
+    }
+
+    free(n);
+  }
+
+  else if (header->type == NODE256) {
+    Node256 *n = (Node256 *)node;
+
+    for (int i = 0; i < 256; i++) {
+      if (n->children[i] != NULL) {
+        free_node(n->children[i]);
+      }
     }
 
     free(n);
@@ -319,11 +365,32 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
           tree->size++;
           return true;
         }
+
+        else {
+          Node256 *new_node = upgrade_node48_to_node256(n);
+          *current_ptr = new_node;
+
+          // Directly assign the 49th child using the ASCII byte as the index
+          new_node->children[c] = alloc_leaf(key, value);
+          new_node->num_children++;
+
+          tree->size++;
+          return true;
+        }
       }
+
     }
 
-    else {
-      return false;
+    else if (header->type == NODE256) {
+      Node256 *n = (Node256 *)*current_ptr;
+      next_ptr = find_child_node256(n, c);
+
+      if (*next_ptr == NULL) {
+        *next_ptr = alloc_leaf(key, value);
+        n->num_children++;
+        tree->size++;
+        return true;
+      }
     }
 
     // Move down to the next level
@@ -395,6 +462,11 @@ void *search_art(ArtTree *tree, const char *key) {
       else {
         next = NULL;
       }
+    }
+
+    else if (header->type == NODE256) {
+      Node256 *n = (Node256 *)current;
+      next = n->children[c];
     }
 
     // 4. If we didn't find the character in the arrays, the key doesn't exist

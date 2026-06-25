@@ -45,6 +45,15 @@ typedef struct {
   uint8_t num_children;
 } Node48;
 
+typedef struct {
+  NodeHeader header;
+
+  void *children[256];
+
+  /* if we use uint8_t, after 255 overflow occurs and the MSB is ignored */
+  uint16_t num_children;
+} Node256;
+
 // LEAF_NODE (ART = Adaptive Radix Tree (Trie))
 
 typedef struct {
