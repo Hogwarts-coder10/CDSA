@@ -3,50 +3,56 @@
 #include <stdlib.h>
 
 int main() {
-  printf("🌲 Starting Final Boss Stress Test: Node256!\n\n");
+  printf("🌲 Starting Final Boss Stress Test: Path Compression!\n\n");
 
   ArtTree *tree = create_art();
 
-  printf("[*] Inserting 60 distinct keys to force Node256 upgrade...\n");
+  // 1. Trigger the Leaf Splitter (Creates the initial compressed node)
+  printf("[*] Inserting 'understanding'...\n");
+  insert_art(tree, "understanding", "Payload A");
 
-  // We need > 48 distinct first-characters to trigger Node256.
-  // We will use a loop to generate strings like "A_Data", "B_Data", etc.
-  // ASCII printable characters start at 33 ('!').
+  // Shares "understand", splits at 'i' vs 'a'
+  printf("[*] Inserting 'understandable' (Splits Leaf)...\n");
+  insert_art(tree, "understandable", "Payload B");
 
-  for (int i = 0; i < 60; i++) {
-    char key[16];
-    // Generate a unique string for each iteration
-    sprintf(key, "%c_Data", (char)(33 + i));
+  // 2. Trigger the Internal Node Splitter (Snaps compressed nodes in half)
+  // Shares "under", breaks the "understand" prefix at 's' vs 'd'
+  printf("[*] Inserting 'underdog' (Snaps 'understand' -> 'under')...\n");
+  insert_art(tree, "underdog", "Payload C");
 
-    insert_art(tree, key, "Payload");
+  // Shares "u", breaks the "under" prefix at 'n' vs 'm'
+  printf("[*] Inserting 'umbrella' (Snaps 'under' -> 'u')...\n");
+  insert_art(tree, "umbrella", "Payload D");
 
-    // Print milestones so we can watch the engine shift gears
-    if (i == 3)
-      printf("   -> Inserted 4 items  (Node4 full)\n");
-    if (i == 15)
-      printf("   -> Inserted 16 items (Node16 full)\n");
-    if (i == 47)
-      printf("   -> Inserted 48 items (Node48 full - UPGRADING TO NODE256!)\n");
-  }
+  printf("\n✅ Insertions complete. Tree Size: %zu\n\n", tree->size);
 
-  printf("\n✅ Insertions complete. Root node should now be a NODE256! (Tree "
-         "Size: %zu)\n\n",
-         tree->size);
+  // 3. Test the Reader (Fast-forwarding depth through prefixes)
+  printf("[*] Testing Prefix Reader Lookups...\n");
 
-  // 2. Test O(1) Absolute Direct Access Searching
-  printf("[*] Testing Node256 O(1) Direct Lookups...\n");
+  char *res1 = (char *)search_art(tree, "understanding");
+  printf("Search 'understanding':  %s (Expected: Payload A)\n",
+         res1 ? res1 : "NULL");
 
-  char *res1 = (char *)search_art(tree, "A_Data"); // 'A' is ASCII 65
-  printf("Search 'A_Data': %s (Expected: Payload)\n", res1 ? res1 : "NULL");
+  char *res2 = (char *)search_art(tree, "understandable");
+  printf("Search 'understandable': %s (Expected: Payload B)\n",
+         res2 ? res2 : "NULL");
 
-  char *res2 = (char *)search_art(tree, "Z_Data"); // 'Z' is ASCII 90
-  printf("Search 'Z_Data': %s (Expected: Payload)\n", res2 ? res2 : "NULL");
+  char *res3 = (char *)search_art(tree, "underdog");
+  printf("Search 'underdog':       %s (Expected: Payload C)\n",
+         res3 ? res3 : "NULL");
 
-  char *res3 = (char *)search_art(tree, "Ghost"); // Doesn't exist
-  printf("Search 'Ghost':  %s (Expected: NULL)\n\n", res3 ? res3 : "NULL");
+  char *res4 = (char *)search_art(tree, "umbrella");
+  printf("Search 'umbrella':       %s (Expected: Payload D)\n",
+         res4 ? res4 : "NULL");
 
-  // 3. Test Teardown (Will hit our new NODE256 free loop)
-  printf("[*] Freeing Tree (Testing Node256 Teardown)...\n");
+  // "under" is a prefix in our tree, but it was never inserted as a leaf!
+  char *res5 = (char *)search_art(tree, "under");
+  printf("Search 'under':          %s (Expected: NULL)\n\n",
+         res5 ? res5 : "NULL");
+
+  // 4. Test Teardown
+  print_art(tree);
+  printf("[*] Freeing Tree (Testing Fragmented Teardown)...\n");
   free_art(tree);
 
   printf("✅ Tree completely dismantled!\n");
