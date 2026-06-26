@@ -59,16 +59,16 @@ static ArtLeaf *alloc_leaf(const char *key, void *value) {
 // Returns the number of characters that successfully matched the node's prefix
 static int check_prefix(NodeHeader *header, const char *key, int depth) {
   // only checks for first 10 characters (or prefix Length)
-  int max_cmp = (header->prefix_len < 10) ? header->prefix_len : 10;
-  int idx;
+  uint32_t max_cmp = (header->prefix_len < 10) ? header->prefix_len : 10;
+  uint32_t idx;
 
   for (idx = 0; idx < max_cmp; idx++) {
     if (header->prefix[idx] != (uint8_t)key[depth + idx]) {
-      return idx;
+      return (int)idx;
     }
   }
 
-  return idx;
+  return (int)idx;
 }
 
 // --- The Adaptive Morphing Engine ---
@@ -78,16 +78,16 @@ static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
 
   // 1. Copy the header (preserves the Path Compression prefixes!)
   new_node->header = old_node->header;
-  new_node->header.type = NODE16; // Make sure we update the tag!
+  new_node->header.type = NODE16;
 
   // 2. Copy the children and their routing keys
   new_node->num_children = old_node->num_children;
-  for (int i = 0; i < old_node->num_children; i++) {
+  for (uint16_t i = 0; i < old_node->num_children; i++) {
     new_node->keys[i] = old_node->keys[i];
     new_node->children[i] = old_node->children[i];
   }
 
-  // 3. Free the old, small node to prevent memory leaks
+  // 3. Free the old, small node
   free(old_node);
 
   return new_node;
@@ -96,20 +96,14 @@ static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
 static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
   Node48 *new_node = alloc_node48();
 
-  // Copy the header
   new_node->header = old_node->header;
   new_node->header.type = NODE48;
 
-  // Copy the children and their routing keys
   new_node->num_children = old_node->num_children;
-  for (int i = 0; i < old_node->num_children; i++) {
+  for (uint16_t i = 0; i < old_node->num_children; i++) {
     uint8_t key_char = old_node->keys[i];
-
-    // Put the pointer in the condensed array
     new_node->children[i] = old_node->children[i];
-
-    // Tell the 256-byte map where to find it!
-    new_node->child_index[key_char] = i;
+    new_node->child_index[key_char] = (uint8_t)i;
   }
 
   free(old_node);
@@ -119,29 +113,25 @@ static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
 static Node256 *upgrade_node48_to_node256(Node48 *old_node) {
   Node256 *new_node = alloc_node256();
 
-  // Copy the header
   new_node->header = old_node->header;
   new_node->header.type = NODE256;
   new_node->num_children = old_node->num_children;
 
-  // Unpack the hashmap to an array
   for (int i = 0; i < 256; i++) {
     uint8_t new_index = old_node->child_index[i];
-
-    if (new_index != 255) { // if the hashmap is not empty
+    if (new_index != 255) {
       new_node->children[i] = old_node->children[new_index];
     }
   }
 
   free(old_node);
-
   return new_node;
 }
 
 // --- Find Child Helpers ---
 
 static void **find_child_node4(Node4 *n, uint8_t c) {
-  for (int i = 0; i < n->num_children; i++) {
+  for (uint16_t i = 0; i < n->num_children; i++) {
     if (n->keys[i] == c) {
       return &n->children[i];
     }
@@ -150,7 +140,7 @@ static void **find_child_node4(Node4 *n, uint8_t c) {
 }
 
 static void **find_child_node16(Node16 *n, uint8_t c) {
-  for (int i = 0; i < n->num_children; i++) {
+  for (uint16_t i = 0; i < n->num_children; i++) {
     if (n->keys[i] == c) {
       return &n->children[i];
     }
@@ -160,10 +150,8 @@ static void **find_child_node16(Node16 *n, uint8_t c) {
 
 static void **find_child_node48(Node48 *n, uint8_t c) {
   uint8_t index = n->child_index[c];
-
   if (index == 255)
     return NULL;
-
   return &n->children[index];
 }
 
@@ -187,7 +175,7 @@ static void free_node(void *node) {
 
   else if (header->type == NODE4) {
     Node4 *n = (Node4 *)node;
-    for (int i = 0; i < n->num_children; i++) {
+    for (uint16_t i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
     }
     free(n);
@@ -195,7 +183,7 @@ static void free_node(void *node) {
 
   else if (header->type == NODE16) {
     Node16 *n = (Node16 *)node;
-    for (int i = 0; i < n->num_children; i++) {
+    for (uint16_t i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
     }
     free(n);
@@ -203,7 +191,7 @@ static void free_node(void *node) {
 
   else if (header->type == NODE48) {
     Node48 *n = (Node48 *)node;
-    for (int i = 0; i < n->num_children; i++) {
+    for (uint16_t i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
     }
     free(n);
@@ -226,7 +214,6 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
   if (node == NULL)
     return;
 
-  // 1. Draw the vertical continuation lines for previous levels
   for (int i = 0; i < level - 1; i++) {
     if (is_last[i])
       printf("    ");
@@ -234,7 +221,6 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
       printf("│   ");
   }
 
-  // 2. Draw the connector for the current node and its routing character
   if (level > 0) {
     if (is_last[level - 1])
       printf("└── ");
@@ -245,14 +231,12 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
 
   NodeHeader *header = (NodeHeader *)node;
 
-  // 3. Base Case: Leaf
   if (header->type == LEAF_NODE) {
     ArtLeaf *leaf = (ArtLeaf *)node;
     printf("🍃 Leaf: \"%s\" -> %s\n", leaf->key, (char *)leaf->value);
     return;
   }
 
-  // 4. Print the Node Type
   if (header->type == NODE4)
     printf("🔀 Node4");
   else if (header->type == NODE16)
@@ -262,11 +246,10 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
   else if (header->type == NODE256)
     printf("🔀 Node256");
 
-  // 5. Print the Compressed Path (Prefix) if it exists
   if (header->prefix_len > 0) {
-    int p_len = (header->prefix_len < 10) ? header->prefix_len : 10;
+    uint32_t p_len = (header->prefix_len < 10) ? header->prefix_len : 10;
     printf(" [Prefix: \"");
-    for (int i = 0; i < p_len; i++)
+    for (uint32_t i = 0; i < p_len; i++)
       printf("%c", header->prefix[i]);
     if (header->prefix_len > 10)
       printf("...");
@@ -274,11 +257,9 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
   }
   printf("\n");
 
-  // 6. Route to children (Tracking the last child for visual formatting)
-  int child_count = 0;
-  int total_children = 0;
+  uint16_t child_count = 0;
+  uint16_t total_children = 0;
 
-  // Get total children so we know when to draw the '└──' elbow
   if (header->type == NODE4)
     total_children = ((Node4 *)node)->num_children;
   else if (header->type == NODE16)
@@ -290,14 +271,14 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
 
   if (header->type == NODE4) {
     Node4 *n = (Node4 *)node;
-    for (int i = 0; i < n->num_children; i++) {
+    for (uint16_t i = 0; i < n->num_children; i++) {
       is_last[level] = (child_count == total_children - 1);
       print_node_visual(n->children[i], n->keys[i], is_last, level + 1);
       child_count++;
     }
   } else if (header->type == NODE16) {
     Node16 *n = (Node16 *)node;
-    for (int i = 0; i < n->num_children; i++) {
+    for (uint16_t i = 0; i < n->num_children; i++) {
       is_last[level] = (child_count == total_children - 1);
       print_node_visual(n->children[i], n->keys[i], is_last, level + 1);
       child_count++;
@@ -324,6 +305,206 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
   }
 }
 
+// Downgrade Engines (Shrinkage)
+
+static Node48 *downgrade_node256_to_node48(Node256 *old_node) {
+  Node48 *new_node = alloc_node48();
+  new_node->header = old_node->header;
+  new_node->header.type = NODE48;
+  new_node->num_children = old_node->num_children;
+
+  uint8_t current_idx = 0;
+  for (int i = 0; i < 256; i++) {
+    if (old_node->children[i] != NULL) {
+      new_node->children[current_idx] = old_node->children[i];
+      new_node->child_index[i] = current_idx;
+      current_idx++;
+    }
+  }
+  free(old_node);
+  return new_node;
+}
+
+static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
+  Node16 *new_node = alloc_node16();
+  new_node->header = old_node->header;
+  new_node->header.type = NODE16;
+  new_node->num_children = old_node->num_children;
+
+  uint8_t current_idx = 0;
+  for (int i = 0; i < 256; i++) {
+    uint8_t old_index = old_node->child_index[i];
+    if (old_index != 255) {
+      new_node->keys[current_idx] = (uint8_t)i;
+      new_node->children[current_idx] = old_node->children[old_index];
+      current_idx++;
+    }
+  }
+  free(old_node);
+  return new_node;
+}
+
+static Node4 *downgrade_node16_to_node4(Node16 *old_node) {
+  Node4 *new_node = alloc_node4();
+  new_node->header = old_node->header;
+  new_node->header.type = NODE16;
+  new_node->num_children = old_node->num_children;
+
+  for (uint16_t i = 0; i < new_node->num_children; i++) {
+    new_node->keys[i] = old_node->keys[i];
+    new_node->children[i] = old_node->children[i];
+  }
+  free(old_node);
+  return new_node;
+}
+
+// Remove child Helpers
+static void remove_child_node4(Node4 *n, uint8_t c) {
+  uint16_t pos = 0;
+  while (pos < n->num_children && n->keys[pos] != c)
+    pos++;
+  if (pos == n->num_children)
+    return;
+
+  for (uint16_t i = pos; i < n->num_children - 1; i++) {
+    n->keys[i] = n->keys[i + 1];
+    n->children[i] = n->children[i + 1];
+  }
+  n->num_children--;
+}
+
+static void remove_child_node16(Node16 *n, uint8_t c) {
+  uint16_t pos = 0;
+  while (pos < n->num_children && n->keys[pos] != c)
+    pos++;
+  if (pos == n->num_children)
+    return;
+
+  for (uint16_t i = pos; i < n->num_children - 1; i++) {
+    n->keys[i] = n->keys[i + 1];
+    n->children[i] = n->children[i + 1];
+  }
+  n->num_children--;
+}
+
+static void remove_child_node48(Node48 *n, uint8_t c) {
+  uint8_t pos = n->child_index[c];
+  if (pos == 255)
+    return;
+  n->children[pos] = NULL;
+  n->child_index[c] = 255;
+  n->num_children--;
+}
+
+static void remove_child_node256(Node256 *n, uint8_t c) {
+  if (n->children[c] != NULL) {
+    n->children[c] = NULL;
+    n->num_children--;
+  }
+}
+
+// --- 3. Internal Engine: Recursive Deletion & Memory Merging ---
+
+static void *recursive_delete(void *node, const char *key, int depth,
+                              bool *deleted, ArtTree *tree) {
+  if (node == NULL)
+    return NULL;
+
+  NodeHeader *header = (NodeHeader *)node;
+
+  if (header->type == LEAF_NODE) {
+    ArtLeaf *leaf = (ArtLeaf *)node;
+    if (strcmp(leaf->key, key) == 0) {
+      *deleted = true;
+      tree->size--;
+      free(leaf->key);
+      free(leaf);
+      return NULL;
+    }
+    return node;
+  }
+
+  if (header->prefix_len > 0) {
+    int match_len = check_prefix(header, key, depth);
+    uint32_t expected_match =
+        (header->prefix_len < 10) ? header->prefix_len : 10;
+    if ((uint32_t)match_len != expected_match)
+      return node;
+    depth += header->prefix_len;
+  }
+
+  uint8_t c = (uint8_t)key[depth];
+  void **child_ptr = NULL;
+
+  if (header->type == NODE4)
+    child_ptr = find_child_node4((Node4 *)node, c);
+  else if (header->type == NODE16)
+    child_ptr = find_child_node16((Node16 *)node, c);
+  else if (header->type == NODE48)
+    child_ptr = find_child_node48((Node48 *)node, c);
+  else if (header->type == NODE256)
+    child_ptr = find_child_node256((Node256 *)node, c);
+
+  if (child_ptr == NULL || *child_ptr == NULL)
+    return node;
+
+  void *new_child = recursive_delete(*child_ptr, key, depth + 1, deleted, tree);
+
+  *child_ptr = new_child;
+
+  if (*deleted && new_child == NULL) {
+    if (header->type == NODE4)
+      remove_child_node4((Node4 *)node, c);
+    else if (header->type == NODE16)
+      remove_child_node16((Node16 *)node, c);
+    else if (header->type == NODE48)
+      remove_child_node48((Node48 *)node, c);
+    else if (header->type == NODE256)
+      remove_child_node256((Node256 *)node, c);
+
+    if (header->type == NODE256 && ((Node256 *)node)->num_children == 48) {
+      return downgrade_node256_to_node48((Node256 *)node);
+    }
+    if (header->type == NODE48 && ((Node48 *)node)->num_children == 16) {
+      return downgrade_node48_to_node16((Node48 *)node);
+    }
+    if (header->type == NODE16 && ((Node16 *)node)->num_children == 4) {
+      return downgrade_node16_to_node4((Node16 *)node);
+    }
+
+    if (header->type == NODE4) {
+      Node4 *n = (Node4 *)node;
+      if (n->num_children == 1) {
+        void *surviving_child = n->children[0];
+        uint8_t routing_char = n->keys[0];
+        NodeHeader *child_header = (NodeHeader *)surviving_child;
+
+        if (child_header->type != LEAF_NODE) {
+          uint32_t new_len = header->prefix_len + 1 + child_header->prefix_len;
+          uint32_t limit = (new_len < 10) ? new_len : 10;
+          uint8_t new_prefix[10];
+
+          uint32_t pos = 0;
+          for (uint32_t i = 0; i < header->prefix_len && pos < limit; i++)
+            new_prefix[pos++] = header->prefix[i];
+          if (pos < limit)
+            new_prefix[pos++] = routing_char;
+          for (uint32_t i = 0; i < child_header->prefix_len && pos < limit; i++)
+            new_prefix[pos++] = child_header->prefix[i];
+
+          child_header->prefix_len = new_len;
+          memcpy(child_header->prefix, new_prefix, limit);
+        }
+
+        free(n);
+        return surviving_child;
+      }
+    }
+  }
+
+  return node;
+}
+
 // --- LifeCycle ---
 
 ArtTree *create_art() {
@@ -345,11 +526,19 @@ void print_art(ArtTree *tree) {
   if (tree == NULL || tree->root == NULL) {
     printf("Tree is empty.\n");
   } else {
-    // Array to track if a node at depth 'i' is the last child
     bool is_last[256] = {false};
     print_node_visual(tree->root, '\0', is_last, 0);
   }
   printf("==========================================\n\n");
+}
+
+bool delete_art(ArtTree *tree, const char *key) {
+  if (tree == NULL || tree->root == NULL)
+    return false;
+
+  bool deleted = false;
+  tree->root = recursive_delete(tree->root, key, 0, &deleted, tree);
+  return deleted;
 }
 
 // --- Main Engine: Insert ---
@@ -382,12 +571,10 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
       Node4 *new_node4 = alloc_node4();
 
-      // --- PATH COMPRESSION: THE CREATOR ---
-      // Save the shared characters into the new node's prefix array
-      int shared_len = i - depth;
+      uint32_t shared_len = (uint32_t)(i - depth);
       new_node4->header.prefix_len = shared_len;
-      int prefix_save = (shared_len < 10) ? shared_len : 10;
-      for (int p = 0; p < prefix_save; p++) {
+      uint32_t prefix_save = (shared_len < 10) ? shared_len : 10;
+      for (uint32_t p = 0; p < prefix_save; p++) {
         new_node4->header.prefix[p] = (uint8_t)key[depth + p];
       }
 
@@ -405,23 +592,22 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       return true;
     }
 
-    // --- PATH COMPRESSION: THE SPLITTER ---
     if (header->prefix_len > 0) {
       int match_len = check_prefix(header, key, depth);
-      int expected_match = (header->prefix_len < 10) ? header->prefix_len : 10;
+      uint32_t expected_match =
+          (header->prefix_len < 10) ? header->prefix_len : 10;
 
-      // Divergence! The strings split before the prefix finished.
-      if (match_len < expected_match) {
+      if ((uint32_t)match_len < expected_match) {
         Node4 *new_node = alloc_node4();
 
-        new_node->header.prefix_len = match_len;
+        new_node->header.prefix_len = (uint32_t)match_len;
         memcpy(new_node->header.prefix, header->prefix, match_len);
 
         uint8_t old_char = header->prefix[match_len];
 
-        header->prefix_len -= (match_len + 1);
-        int new_len = (header->prefix_len < 10) ? header->prefix_len : 10;
-        for (int p = 0; p < new_len; p++) {
+        header->prefix_len -= ((uint32_t)match_len + 1);
+        uint32_t new_len = (header->prefix_len < 10) ? header->prefix_len : 10;
+        for (uint32_t p = 0; p < new_len; p++) {
           header->prefix[p] = header->prefix[match_len + 1 + p];
         }
 
@@ -438,8 +624,6 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
         tree->size++;
         return true;
       }
-
-      // Fast-forward depth if perfectly matched
       depth += header->prefix_len;
     }
 
@@ -559,16 +743,15 @@ void *search_art(ArtTree *tree, const char *key) {
       return NULL;
     }
 
-    // --- PATH COMPRESSION: THE READER ---
     if (header->prefix_len > 0) {
       int match_len = check_prefix(header, key, depth);
-      int expected_match = (header->prefix_len < 10) ? header->prefix_len : 10;
+      uint32_t expected_match =
+          (header->prefix_len < 10) ? header->prefix_len : 10;
 
-      if (match_len != expected_match) {
-        return NULL; // Mismatch in the compressed path, word isn't here
+      if ((uint32_t)match_len != expected_match) {
+        return NULL;
       }
-
-      depth += header->prefix_len; // Fast-forward depth!
+      depth += header->prefix_len;
     }
 
     uint8_t c = key_bytes[depth];
@@ -576,7 +759,7 @@ void *search_art(ArtTree *tree, const char *key) {
 
     if (header->type == NODE4) {
       Node4 *n = (Node4 *)current;
-      for (int i = 0; i < n->num_children; i++) {
+      for (uint16_t i = 0; i < n->num_children; i++) {
         if (n->keys[i] == c) {
           next = n->children[i];
           break;
@@ -586,7 +769,7 @@ void *search_art(ArtTree *tree, const char *key) {
 
     else if (header->type == NODE16) {
       Node16 *n = (Node16 *)current;
-      for (int i = 0; i < n->num_children; i++) {
+      for (uint16_t i = 0; i < n->num_children; i++) {
         if (n->keys[i] == c) {
           next = n->children[i];
           break;
