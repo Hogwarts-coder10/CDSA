@@ -37,6 +37,7 @@ void insert_hashmap(HashMap *map, const char *key, void *value) {
 
   if (map->size >= (map->capacity * 3) / 4) {
     resize_hashmap(map);
+    insert_hashmap(map, key, value);
     return;
   }
 
@@ -45,7 +46,8 @@ void insert_hashmap(HashMap *map, const char *key, void *value) {
   // Look for empty slot or the exact same slot
   while (map->entries[index].key != NULL) {
     // If the key already exists, UPDATE the value and exit.
-    if (strcmp(map->entries[index].key, key) == 0) {
+    if (map->entries[index].key != TOMBSTONE &&
+        strcmp(map->entries[index].key, key) == 0) {
       map->entries[index].value = value;
       return; // Do NOT increment size!
     }
