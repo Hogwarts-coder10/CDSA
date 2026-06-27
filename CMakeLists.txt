@@ -111,3 +111,22 @@ target_compile_options(cdsa PRIVATE
     -Wextra
     -Wpedantic
 )
+
+# ==========================================
+# ====== SYSTEM-WIDE INSTALLATION ==========
+# ==========================================
+
+# Include standard installation directory variables
+include(GNUInstallDirs)
+
+# 1. Install the compiled library (libcdsa.a)
+install(TARGETS cdsa
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+# 2. Install the header files (keeping the CDSA/ prefix)
+install(DIRECTORY include/CDSA
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.h"
+)
