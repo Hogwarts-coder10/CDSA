@@ -17,15 +17,27 @@ static int random_level() {
 
 static SkipNode *create_node(int level, double score, const char *value) {
   SkipNode *node = malloc(sizeof(SkipNode));
-  node->score = score;
-  node->value = strdup(value); // The database owns this string
-  node->level = level;
+  if (node == NULL) {
+    return NULL; // bail before touching node->anything
+  }
 
-  // calloc sets all the double pointers to NULL initially
+  node->value = strdup(value);
+  if (node->value == NULL) {
+    free(node); // undo the first allocation
+    return NULL;
+  }
+
   node->forward = calloc(level, sizeof(SkipNode *));
+  if (node->forward == NULL) {
+    free(node->value); // undo every allocation made so far
+    free(node);
+    return NULL;
+  }
+
+  node->score = score;
+  node->level = level;
   return node;
 }
-
 // --- Lifecycle ---
 
 SkipList *create_skiplist() {

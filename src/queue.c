@@ -1,10 +1,20 @@
 #include "CDSA/queue.h"
 #include <stdlib.h>
+#include <string.h>
 
 Queue *create_queue(size_t capacity, size_t elem_size) {
   Queue *queue = malloc(sizeof(Queue));
+  if (queue == NULL) {
+    return NULL;
+  }
 
   queue->rb = create_ringbuffer(capacity, elem_size);
+
+  if (queue->rb == NULL) {
+    free(queue);
+    return NULL;
+  }
+
   return queue;
 }
 

@@ -12,6 +12,9 @@
 
 static Node4 *alloc_node4() {
   Node4 *node = calloc(1, sizeof(Node4));
+  if (node == NULL) {
+    return NULL;
+  }
   node->header.type = NODE4;
   node->num_children = 0;
   return node;
@@ -19,6 +22,9 @@ static Node4 *alloc_node4() {
 
 static Node16 *alloc_node16() {
   Node16 *node = calloc(1, sizeof(Node16));
+  if (node == NULL) {
+    return NULL;
+  }
   node->header.type = NODE16;
   node->num_children = 0;
   return node;
@@ -26,6 +32,9 @@ static Node16 *alloc_node16() {
 
 static Node48 *alloc_node48() {
   Node48 *node = calloc(1, sizeof(Node48));
+  if (node == NULL) {
+    return NULL;
+  }
   node->header.type = NODE48;
 
   // Setting all indices to '255'(empty)
@@ -37,6 +46,9 @@ static Node48 *alloc_node48() {
 
 static Node256 *alloc_node256() {
   Node256 *node = calloc(1, sizeof(Node256));
+  if (node == NULL) {
+    return NULL;
+  }
   node->header.type = NODE256;
   node->num_children = 0;
   return node;
@@ -52,8 +64,16 @@ static char *safe_strdup(const char *s) {
 
 static ArtLeaf *alloc_leaf(const char *key, void *value) {
   ArtLeaf *leaf = calloc(1, sizeof(ArtLeaf));
+  if (leaf == NULL) {
+    return NULL;
+  }
+
   leaf->header.type = LEAF_NODE;
   leaf->key = safe_strdup(key);
+  if (leaf->key == NULL) {
+    free(leaf);
+    return NULL;
+  }
   leaf->value = value;
   return leaf;
 }

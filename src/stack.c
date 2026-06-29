@@ -4,10 +4,21 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 Stack *create_stack(size_t elem_size) {
   Stack *stack = malloc(sizeof(Stack));
+
+  if (stack == NULL) {
+    return NULL;
+  }
   stack->vec = create_vector(elem_size);
+
+  if (stack->vec == NULL) {
+    free(stack);
+    return NULL;
+  }
+
   return stack;
 }
 

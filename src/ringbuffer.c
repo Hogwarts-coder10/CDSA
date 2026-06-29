@@ -7,6 +7,9 @@
 
 RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
   RingBuffer *rb = malloc(sizeof(RingBuffer));
+  if (rb == NULL) {
+    return NULL;
+  }
 
   rb->capacity = capacity;
   rb->elem_size = elem_size;
@@ -16,6 +19,10 @@ RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
 
   // Allocate the continuous block of memory
   rb->data = malloc(capacity * elem_size);
+  if (rb->data == NULL) {
+    free(rb);
+    return NULL;
+  }
 
   return rb;
 }

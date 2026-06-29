@@ -1,11 +1,22 @@
 #include "CDSA/deque.h"
 #include <stdlib.h>
+#include <string.h>
 
 // --- Core Lifecycle ---
 
 Deque *create_deque(size_t capacity, size_t elem_size) {
   Deque *deque = malloc(sizeof(Deque));
+
+  if (deque == NULL) {
+    return NULL;
+  }
+
   deque->rb = create_ringbuffer(capacity, elem_size);
+
+  if (deque->rb == NULL) {
+    free(deque);
+    return NULL;
+  }
   return deque;
 }
 

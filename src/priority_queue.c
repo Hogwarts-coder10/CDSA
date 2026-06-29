@@ -10,6 +10,10 @@ static void sift_up(PriorityQueue *pq, size_t index) {
 
   void *temp = malloc(pq->elem_size);
 
+  if (temp == NULL) {
+    return;
+  }
+
   while (index > 0) {
     size_t parent_idx = (index - 1) / 2;
 
@@ -34,6 +38,10 @@ static void sift_up(PriorityQueue *pq, size_t index) {
 static void sift_down(PriorityQueue *pq, size_t index) {
   size_t size = size_vector(pq->data);
   void *temp = malloc(pq->elem_size);
+
+  if (temp == NULL) {
+    return;
+  }
 
   while (true) {
     size_t left_child = 2 * index + 1;
@@ -78,7 +86,17 @@ static void sift_down(PriorityQueue *pq, size_t index) {
 
 PriorityQueue *create_pq(size_t elem_size, PriorityCompareFn cmp_func) {
   PriorityQueue *pq = malloc(sizeof(PriorityQueue));
+
+  if (pq == NULL) {
+    return NULL;
+  }
+
   pq->data = create_vector(elem_size);
+
+  if (pq->data == NULL) {
+    free(pq);
+    return NULL;
+  }
   pq->elem_size = elem_size;
   pq->cmp = cmp_func;
   return pq;

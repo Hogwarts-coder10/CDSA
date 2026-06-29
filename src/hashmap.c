@@ -8,11 +8,21 @@
 
 HashMap *create_hashmap(size_t capacity) {
   HashMap *map = malloc(sizeof(HashMap));
+
+  if (map == NULL) {
+    return NULL;
+  }
+
   map->size = 0;
 
   map->capacity = capacity;
 
   map->entries = calloc(capacity, sizeof(HashEntry));
+
+  if (map->entries == NULL) {
+    free(map);
+    return NULL;
+  }
 
   return map;
 }
@@ -104,10 +114,13 @@ void resize_hashmap(HashMap *map) {
   size_t old_capacity = map->capacity;
   HashEntry *old_entries = map->entries;
 
-  map->capacity *= 2;
-  map->entries = calloc(map->capacity, sizeof(HashEntry));
-  map->size = 0;
+  size_t new_capacity = map->capacity * 2;
+  HashEntry *new_entries = calloc(new_capacity, sizeof(HashEntry));
 
+  if (new_entries == NULL) {
+    printf("[System] Warning: HashMap resize failed due to OOM.\n");
+    return;
+  }
   // 4. Rehash all VALID entries into the new array
   for (size_t i = 0; i < old_capacity; i++) {
 
