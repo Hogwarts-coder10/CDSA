@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Sentinel Value for empty slots in Node48
+#define ART_EMPTY_SLOT 255
+
 // --- Node Allocators ---
 
 static Node4 *alloc_node4() {
@@ -26,7 +29,7 @@ static Node48 *alloc_node48() {
   node->header.type = NODE48;
 
   // Setting all indices to '255'(empty)
-  memset(node->child_index, 255, sizeof(node->child_index));
+  memset(node->child_index, ART_EMPTY_SLOT, sizeof(node->child_index));
 
   node->num_children = 0;
   return node;
@@ -119,7 +122,7 @@ static Node256 *upgrade_node48_to_node256(Node48 *old_node) {
 
   for (int i = 0; i < 256; i++) {
     uint8_t new_index = old_node->child_index[i];
-    if (new_index != 255) {
+    if (new_index != ART_EMPTY_SLOT) {
       new_node->children[i] = old_node->children[new_index];
     }
   }
@@ -150,7 +153,7 @@ static void **find_child_node16(Node16 *n, uint8_t c) {
 
 static void **find_child_node48(Node48 *n, uint8_t c) {
   uint8_t index = n->child_index[c];
-  if (index == 255)
+  if (index == ART_EMPTY_SLOT)
     return NULL;
   return &n->children[index];
 }
@@ -287,7 +290,7 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
     Node48 *n = (Node48 *)node;
     for (int i = 0; i < 256; i++) {
       uint8_t idx = n->child_index[i];
-      if (idx != 255) {
+      if (idx != ART_EMPTY_SLOT) {
         is_last[level] = (child_count == total_children - 1);
         print_node_visual(n->children[idx], (char)i, is_last, level + 1);
         child_count++;
@@ -334,7 +337,7 @@ static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
   uint8_t current_idx = 0;
   for (int i = 0; i < 256; i++) {
     uint8_t old_index = old_node->child_index[i];
-    if (old_index != 255) {
+    if (old_index != ART_EMPTY_SLOT) {
       new_node->keys[current_idx] = (uint8_t)i;
       new_node->children[current_idx] = old_node->children[old_index];
       current_idx++;
@@ -347,7 +350,7 @@ static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
 static Node4 *downgrade_node16_to_node4(Node16 *old_node) {
   Node4 *new_node = alloc_node4();
   new_node->header = old_node->header;
-  new_node->header.type = NODE16;
+  new_node->header.type = NODE4;
   new_node->num_children = old_node->num_children;
 
   for (uint16_t i = 0; i < new_node->num_children; i++) {
@@ -389,10 +392,10 @@ static void remove_child_node16(Node16 *n, uint8_t c) {
 
 static void remove_child_node48(Node48 *n, uint8_t c) {
   uint8_t pos = n->child_index[c];
-  if (pos == 255)
+  if (pos == ART_EMPTY_SLOT)
     return;
   n->children[pos] = NULL;
-  n->child_index[c] = 255;
+  n->child_index[c] = ART_EMPTY_SLOT;
   n->num_children--;
 }
 
@@ -411,6 +414,7 @@ static void *recursive_delete(void *node, const char *key, int depth,
     return NULL;
 
   NodeHeader *header = (NodeHeader *)node;
+  int key_len = strlen(key);
 
   if (header->type == LEAF_NODE) {
     ArtLeaf *leaf = (ArtLeaf *)node;
@@ -431,6 +435,9 @@ static void *recursive_delete(void *node, const char *key, int depth,
     if ((uint32_t)match_len != expected_match)
       return node;
     depth += header->prefix_len;
+
+    if (depth > key_len)
+      return NULL;
   }
 
   uint8_t c = (uint8_t)key[depth];
@@ -503,6 +510,54 @@ static void *recursive_delete(void *node, const char *key, int depth,
   }
 
   return node;
+}
+
+// Internal Helper: Optimistic Leaf Finder
+// Finds the first available leaf under a given node to recover unverified
+// prefix bytes
+
+static ArtLeaf *find_minimum_leaf(void *node) {
+  if (node == NULL) {
+    return NULL;
+  }
+
+  NodeHeader *header = (NodeHeader *)node;
+
+  while (header->type != LEAF_NODE) {
+    if (header->type == NODE4) {
+      node = ((Node4 *)node)->children[0];
+    }
+
+    else if (header->type == NODE16) {
+      node = ((Node16 *)node)->children[0];
+    }
+
+    else if (header->type == NODE48) {
+      Node48 *n = (Node48 *)node;
+
+      for (int i = 0; i < 256; i++) {
+        if (n->child_index[i] != ART_EMPTY_SLOT) {
+          node = n->children[n->child_index[i]];
+          break;
+        }
+      }
+    }
+
+    else if (header->type == NODE256) {
+      Node256 *n = (Node256 *)node;
+
+      for (int i = 0; i < 256; i++) {
+        if (n->children[i] != NULL) {
+          node = n->children[i];
+          break;
+        }
+      }
+    }
+
+    header = (NodeHeader *)node;
+  }
+
+  return (ArtLeaf *)node;
 }
 
 // --- LifeCycle ---
@@ -597,25 +652,45 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       uint32_t expected_match =
           (header->prefix_len < 10) ? header->prefix_len : 10;
 
-      if ((uint32_t)match_len < expected_match) {
+      // -- Optimistic Fix: Fetch a leaf to to verify the rest of the long
+      // prefix
+      if ((uint32_t)match_len == expected_match && header->prefix_len > 10) {
+        ArtLeaf *leaf = find_minimum_leaf(*current_ptr);
+
+        while ((uint32_t)match_len < header->prefix_len &&
+               key[depth + match_len] != '\0' &&
+               key[depth + match_len] == leaf->key[depth + match_len]) {
+          match_len++;
+        }
+      }
+
+      // Now we use the TRUE match_len to determine if we split
+      if ((uint32_t)match_len < header->prefix_len) {
         Node4 *new_node = alloc_node4();
-
         new_node->header.prefix_len = (uint32_t)match_len;
-        memcpy(new_node->header.prefix, header->prefix, match_len);
 
-        uint8_t old_char = header->prefix[match_len];
+        uint32_t save_len = (match_len < 10) ? match_len : 10;
+        for (uint32_t p = 0; p < save_len; p++) {
+          new_node->header.prefix[p] = (uint8_t)key[depth + p];
+        }
+
+        // Fetch the diverging chars from the leaf, as they might not be in our
+        // 10-byte buffer
+        ArtLeaf *leaf = find_minimum_leaf(*current_ptr);
+        uint8_t old_char = (uint8_t)leaf->key[depth + match_len];
 
         header->prefix_len -= ((uint32_t)match_len + 1);
         uint32_t new_len = (header->prefix_len < 10) ? header->prefix_len : 10;
+
         for (uint32_t p = 0; p < new_len; p++) {
-          header->prefix[p] = header->prefix[match_len + 1 + p];
+          header->prefix[p] = (uint8_t)leaf->key[depth + match_len + 1 + p];
         }
 
         new_node->keys[0] = old_char;
         new_node->children[0] = *current_ptr;
         new_node->num_children++;
 
-        uint8_t new_char = (uint8_t)key[depth + match_len];
+        uint8_t new_char = (uint8_t)key[match_len + depth];
         new_node->keys[1] = new_char;
         new_node->children[1] = alloc_leaf(key, value);
         new_node->num_children++;
@@ -624,6 +699,7 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
         tree->size++;
         return true;
       }
+
       depth += header->prefix_len;
     }
 
@@ -731,6 +807,7 @@ void *search_art(ArtTree *tree, const char *key) {
   void *current = tree->root;
   uint8_t *key_bytes = (uint8_t *)key;
   int depth = 0;
+  int key_len = strlen(key);
 
   while (current != NULL) {
     NodeHeader *header = (NodeHeader *)current;
@@ -752,6 +829,9 @@ void *search_art(ArtTree *tree, const char *key) {
         return NULL;
       }
       depth += header->prefix_len;
+
+      if (depth > key_len)
+        return NULL;
     }
 
     uint8_t c = key_bytes[depth];
@@ -780,7 +860,7 @@ void *search_art(ArtTree *tree, const char *key) {
     else if (header->type == NODE48) {
       Node48 *n = (Node48 *)current;
       uint8_t index = n->child_index[c];
-      if (index != 255) {
+      if (index != ART_EMPTY_SLOT) {
         next = n->children[index];
       }
     }

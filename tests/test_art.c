@@ -113,11 +113,27 @@ int main() {
   verify(tree, "understandable", "Payload B");
   verify(tree, "underdog", NULL);
 
+  // ---------------------------------------------------------
+  printf("\n--- PHASE 5: LONG PREFIX BUFFER SAFETY (ASAN REPRO) ---\n");
+  // ---------------------------------------------------------
+  printf("[*] Inserting Kedis-C style namespaced keys (>10 byte shared "
+         "prefix)...\n");
+  insert_art(tree, "session:user:12345:auth_token", "Token A");
+  insert_art(tree, "session:user:12345:refresh_token", "Token B");
+
+  printf("[*] Executing adversarial short search (ASan trigger)...\n");
+  // Pre-patch: This caused an out-of-bounds read and crashed ASan.
+  verify(tree, "session:us", NULL);
+
+  printf("[*] Verifying long keys remain intact...\n");
+  verify(tree, "session:user:12345:auth_token", "Token A");
+  verify(tree, "session:user:12345:refresh_token", "Token B");
+
   printf("\n--- FINAL TREE VISUALIZATION ---\n");
   print_art(tree);
 
   // ---------------------------------------------------------
-  printf("--- PHASE 5: MEMORY TEARDOWN ---\n");
+  printf("--- PHASE 6: MEMORY TEARDOWN ---\n");
   // ---------------------------------------------------------
   // Free the remaining manually allocated payloads from Phase 2 (Indices 0, 1,
   // 2, 3)
@@ -129,7 +145,8 @@ int main() {
   }
 
   free_art(tree);
-  printf("\n✅ Tree completely dismantled. Run Valgrind to verify 0 leaks!\n");
+  printf("\n✅ Tree completely dismantled. Run ASan/Valgrind to verify 0 "
+         "leaks!\n");
   printf("==========================================\n\n");
 
   return 0;
