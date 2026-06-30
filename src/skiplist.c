@@ -42,11 +42,21 @@ static SkipNode *create_node(int level, double score, const char *value) {
 
 SkipList *create_skiplist() {
   SkipList *sl = malloc(sizeof(SkipList));
+
+  if (sl == NULL) {
+    return NULL;
+  }
   sl->level = 1;
   sl->size = 0;
 
   // The Dummy Header sits at max level but holds no real data
   sl->header = create_node(SKIPLIST_MAX_LEVEL, 0.0, "");
+
+  if (sl->header == NULL) {
+    free(sl);
+    return NULL;
+  }
+
   return sl;
 }
 

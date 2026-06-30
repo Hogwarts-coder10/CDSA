@@ -23,7 +23,7 @@ void *get_hashmap(HashMap *map, const char *key);
 bool contains_hashmap(HashMap *map, const char *key);
 void remove_hashmap(HashMap *map, const char *key);
 void print_hashmap(HashMap *map);
-void resize_hashmap(HashMap *map);
+bool resize_hashmap(HashMap *map);
 void remove_hashmap(HashMap *map, const char *key);
 
 #endif
