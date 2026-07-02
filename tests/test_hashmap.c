@@ -28,7 +28,7 @@ int main() {
   insert_hashmap(map, "apple", &new_a); // Should overwrite 10 with 99
 
   printf("apple -> %d (Expected: 99)\n", *(int *)get_hashmap(map, "apple"));
-  printf("HashMap Size: %zu (Expected: 2)\n\n", map->size);
+  printf("HashMap Size: %zu (Expected: 2)\n\n", size_hashmap(map));
 
   // 4. Load Factor Guard & Resizing
   printf("[*] Testing Load Factor Guard & Resizing...\n");

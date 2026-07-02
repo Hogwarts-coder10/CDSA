@@ -16,6 +16,9 @@ void free_skiplist(SkipList *sl);
 
 // Core operations
 
+size_t size_skiplist(SkipList *sl);
+int level_skiplist(SkipList *sl);
+
 // Returns true if inserted, false if it failed (like out of memory)
 bool insert_skiplist(SkipList *sl, double score, const char *value);
 

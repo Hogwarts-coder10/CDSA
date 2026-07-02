@@ -11,13 +11,13 @@ Deque *create_deque(size_t capacity, size_t elem_size);
 void free_deque(Deque *dequeue);
 
 // --- Front Operations ---
-bool push_front(Deque *deque, void *elem);
-void pop_front(Deque *deque);
+bool push_front_deque(Deque *deque, void *elem);
+void pop_front_deque(Deque *deque);
 void *front_deque(Deque *deque);
 
 // --- Back Operations ---
-bool push_back(Deque *deque, void *elem);
-void pop_back(Deque *deque);
+bool push_back_deque(Deque *deque, void *elem);
+void pop_back_deque(Deque *deque);
 void *back_deque(Deque *deque);
 
 // --- Utilities ---

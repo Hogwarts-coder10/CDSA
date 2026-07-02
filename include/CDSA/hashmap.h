@@ -17,5 +17,6 @@ void remove_hashmap(HashMap *map, const char *key);
 void print_hashmap(HashMap *map);
 bool resize_hashmap(HashMap *map);
 void remove_hashmap(HashMap *map, const char *key);
+size_t size_hashmap(HashMap *map);
 
 #endif

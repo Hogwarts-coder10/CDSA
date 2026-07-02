@@ -35,7 +35,7 @@ int main() {
   verify(tree, "understanding", "Payload A");
   verify(tree, "umbrella", "Payload D");
   verify(tree, "under", NULL); // Prefix exists, but not as a leaf
-  printf("Tree Size: %zu\n\n", tree->size);
+  printf("Tree Size: %zu\n\n", size_art(tree));
 
   // ---------------------------------------------------------
   printf("--- PHASE 2: WIDTH UPGRADES (NODE4 -> NODE256) ---\n");
@@ -58,7 +58,7 @@ int main() {
   verify(tree, "Z\x0A", "Data 10");
   verify(tree, "Z\x80", "Data 128");
   verify(tree, "Z\xFF", "Data 255");
-  printf("Tree Size: %zu\n\n", tree->size);
+  printf("Tree Size: %zu\n\n", size_art(tree));
 
   // ---------------------------------------------------------
   printf("--- PHASE 3: DELETION & SHRINKAGE (NODE256 -> NODE4) ---\n");
@@ -97,7 +97,7 @@ int main() {
   printf("[*] Verifying remaining keys in shrunk node...\n");
   verify(tree, "Z\x03", "Data 3");
   verify(tree, "Z\xFF", NULL); // Proves it was deleted
-  printf("Tree Size: %zu\n\n", tree->size);
+  printf("Tree Size: %zu\n\n", size_art(tree));
 
   // ---------------------------------------------------------
   printf("--- PHASE 4: PATH MERGING (PREFIX GLUING) ---\n");

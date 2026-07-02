@@ -100,6 +100,9 @@ void free_skiplist(SkipList *sl) {
 
 // --- Core Operations ---
 
+size_t size_skiplist(SkipList *sl) { return sl->size; }
+int level_skiplist(SkipList *sl) { return sl->level; }
+
 bool insert_skiplist(SkipList *sl, double score, const char *value) {
   SkipNode *current = sl->header;
 

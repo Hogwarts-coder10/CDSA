@@ -28,4 +28,5 @@ bool insert_art(ArtTree *tree, const char *key, void *value);
 void *search_art(ArtTree *tree, const char *key);
 void print_art(ArtTree *tree);
 bool delete_art(ArtTree *tree, const char *key);
+size_t size_art(ArtTree *tree);
 #endif

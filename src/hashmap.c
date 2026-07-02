@@ -51,6 +51,8 @@ void free_hashmap(HashMap *map) {
   free(map);
 }
 
+size_t size_hashmap(HashMap *map) { return map->size; }
+
 size_t hash_function(const char *key, size_t capacity) {
   size_t hash = 0;
   while (*key != '\0') {

@@ -681,6 +681,8 @@ void free_art(ArtTree *tree) {
   free(tree);
 }
 
+size_t size_art(ArtTree *tree) { return tree->size; }
+
 void print_art(ArtTree *tree) {
   printf("\n=== 🌲 ART TREE DUMP (Total Keys: %zu) ===\n", tree->size);
   if (tree == NULL || tree->root == NULL) {
