@@ -6,19 +6,9 @@
 
 #define SKIPLIST_MAX_LEVEL 16
 
-typedef struct SkipNode {
-  double score; // the sorting weight
-  char *value;  // the actual data
-  int level;    // How tall is this node (1 to MAX_LEVEL)
-  struct SkipNode *
-      *forward; // array of pointers to the next nodes at higher level
-} SkipNode;
+typedef struct SkipNode SkipNode;
 
-typedef struct {
-  SkipNode *header; // starting node (dummy)
-  int level;        // current highest level in use
-  size_t size;      // total number of items
-} SkipList;
+typedef struct SkipList SkipList;
 
 // LifeCycle
 SkipList *create_skiplist();

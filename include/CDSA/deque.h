@@ -1,13 +1,10 @@
 #ifndef DEQUE_H
 #define DEQUE_H
 
-#include "CDSA/ringbuffer.h"
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct {
-  RingBuffer *rb;
-} Deque;
+typedef struct Deque Deque;
 
 // -- Core LifeCycle
 Deque *create_deque(size_t capacity, size_t elem_size);

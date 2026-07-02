@@ -1,6 +1,11 @@
 #include "CDSA/queue.h"
+#include "CDSA/ringbuffer.h"
 #include <stdlib.h>
 #include <string.h>
+
+struct Queue {
+  RingBuffer *rb;
+};
 
 Queue *create_queue(size_t capacity, size_t elem_size) {
   Queue *queue = malloc(sizeof(Queue));

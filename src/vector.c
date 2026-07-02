@@ -5,6 +5,13 @@
 
 #define INITIAL_CAPACITY 4
 
+struct Vector {
+  void *data;
+  size_t size;
+  size_t capacity;
+  size_t elem_size;
+};
+
 Vector *create_vector(size_t elem_size) {
   Vector *vec = malloc(sizeof(Vector));
   if (vec == NULL)

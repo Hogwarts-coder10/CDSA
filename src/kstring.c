@@ -7,6 +7,12 @@
 
 #define INITIAL_CAPACITY 16
 
+struct KString {
+  char *data;
+  size_t size;
+  size_t capacity;
+};
+
 KString *create_kstring(void) {
   KString *str = malloc(sizeof(KString));
   if (str == NULL)

@@ -1,13 +1,10 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include "CDSA/ringbuffer.h"
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct {
-  RingBuffer *rb;
-} Queue;
+typedef struct Queue Queue;
 
 Queue *create_queue(size_t capacity, size_t elem_size);
 void free_queue(Queue *queue);

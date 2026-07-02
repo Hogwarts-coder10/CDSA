@@ -1,17 +1,12 @@
 #ifndef PRIORITY_QUEUE_H
 #define PRIORITY_QUEUE_H
 
-#include "CDSA/vector.h"
 #include <stdbool.h>
 #include <stddef.h>
 
 typedef bool (*PriorityCompareFn)(void *a, void *b);
 
-typedef struct {
-  Vector *data;
-  size_t elem_size;
-  PriorityCompareFn cmp;
-} PriorityQueue;
+typedef struct PriorityQueue PriorityQueue;
 
 // --- LifeCycle ---
 PriorityQueue *create_pq(size_t elem_size, PriorityCompareFn cmp_func);

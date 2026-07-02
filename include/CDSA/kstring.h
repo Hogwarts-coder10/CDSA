@@ -4,11 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct {
-  char *data;
-  size_t size;
-  size_t capacity;
-} KString;
+typedef struct KString KString;
 
 KString *create_kstring(void);
 void free_kstring(KString *str);

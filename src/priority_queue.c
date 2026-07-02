@@ -1,6 +1,13 @@
 #include "CDSA/priority_queue.h"
+#include "CDSA/vector.h"
 #include <stdlib.h>
 #include <string.h>
+
+struct PriorityQueue {
+  Vector *data;
+  size_t elem_size;
+  PriorityCompareFn cmp;
+};
 
 // --- Internal Helpers: Heap Math ---
 

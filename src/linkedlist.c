@@ -1,8 +1,20 @@
 #include "CDSA/linkedlist.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+struct Node {
+  void *data;
+  struct Node *next;
+};
+
+struct LinkedList {
+  Node *head;
+  size_t size;
+  size_t elem_size;
+};
 
 LinkedList *create_linkedlist(size_t elem_size) {
   LinkedList *list = malloc(sizeof(LinkedList));

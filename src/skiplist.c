@@ -1,6 +1,21 @@
 #include "CDSA/skiplist.h"
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+
+struct SkipNode {
+  double score; // the sorting weight
+  char *value;  // the actual data
+  int level;    // How tall is this node (1 to MAX_LEVEL)
+  struct SkipNode *
+      *forward; // array of pointers to the next nodes at higher level
+};
+
+struct SkipList {
+  SkipNode *header; // starting node (dummy)
+  int level;        // current highest level in use
+  size_t size;      // total number of items
+};
 
 // --- Internal Helpers ---
 
@@ -15,21 +30,29 @@ static int random_level() {
   return level;
 }
 
+// Portable strdup — no POSIX feature-test macro required
+static char *safe_strdup(const char *s) {
+  size_t len = strlen(s) + 1;
+  char *dup = malloc(len);
+  if (dup)
+    memcpy(dup, s, len);
+  return dup;
+}
+
 static SkipNode *create_node(int level, double score, const char *value) {
   SkipNode *node = malloc(sizeof(SkipNode));
-  if (node == NULL) {
-    return NULL; // bail before touching node->anything
-  }
+  if (node == NULL)
+    return NULL;
 
-  node->value = strdup(value);
+  node->value = safe_strdup(value); // portable, no implicit-decl risk
   if (node->value == NULL) {
-    free(node); // undo the first allocation
+    free(node);
     return NULL;
   }
 
   node->forward = calloc(level, sizeof(SkipNode *));
   if (node->forward == NULL) {
-    free(node->value); // undo every allocation made so far
+    free(node->value);
     free(node);
     return NULL;
   }
@@ -101,7 +124,9 @@ bool insert_skiplist(SkipList *sl, double score, const char *value) {
   // Roll the dice for the new node's height
   int new_level = random_level();
 
-  // If it's the tallest node we've ever seen, update the header's routing
+  // If it's the tallest node we've ever seen, update the header's routing.
+  // Save old level so we can roll back if create_node fails.
+  int old_level = sl->level;
   if (new_level > sl->level) {
     for (int i = sl->level; i < new_level; i++) {
       update[i] = sl->header;
@@ -111,6 +136,11 @@ bool insert_skiplist(SkipList *sl, double score, const char *value) {
 
   // Create the node and splice it in using our breadcrumbs
   SkipNode *new_node = create_node(new_level, score, value);
+  if (new_node == NULL) {
+    sl->level = old_level; // undo the level bump, list stays consistent
+    return false;
+  }
+
   for (int i = 0; i < new_level; i++) {
     new_node->forward[i] = update[i]->forward[i];
     update[i]->forward[i] = new_node;
@@ -201,12 +231,26 @@ char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
 
   // 3. Allocate an array of string pointers
   char **results = malloc(count * sizeof(char *));
+  if (results == NULL) {
+    *out_count = 0;
+    return NULL;
+  }
 
   // 4. Populate the array by walking the Level 0 linked list
   int idx = 0;
   while (current != NULL && current->score <= max_score) {
-    // strdup ensures the caller owns these strings!
-    results[idx] = strdup(current->value);
+    // safe_strdup ensures the caller owns these strings!
+    results[idx] = safe_strdup(current->value);
+
+    if (results[idx] == NULL) {
+      // Free every string we already duplicated, then the array itself
+      for (int j = 0; j < idx; j++)
+        free(results[j]);
+      free(results);
+      *out_count = 0;
+      return NULL;
+    }
+
     idx++;
     current = current->forward[0];
   }

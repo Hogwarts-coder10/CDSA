@@ -2,9 +2,12 @@
 #include "CDSA/vector.h"
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+struct Stack {
+  Vector *vec;
+};
 
 Stack *create_stack(size_t elem_size) {
   Stack *stack = malloc(sizeof(Stack));

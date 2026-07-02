@@ -4,12 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct {
-  void *data;
-  size_t size;
-  size_t capacity;
-  size_t elem_size;
-} Vector;
+typedef struct Vector Vector;
 
 Vector *create_vector(size_t elem_size);
 void push_vector(Vector *vec, void *elem);

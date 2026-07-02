@@ -4,16 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct Node {
-  void *data;
-  struct Node *next;
-} Node;
-
-typedef struct {
-  Node *head;
-  size_t size;
-  size_t elem_size;
-} LinkedList;
+typedef struct Node Node;
+typedef struct LinkedList LinkedList;
 
 LinkedList *create_linkedlist(size_t elem_size);
 void free_linkedlist(LinkedList *list);

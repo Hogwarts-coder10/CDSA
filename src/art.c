@@ -8,6 +8,62 @@
 // Sentinel Value for empty slots in Node48
 #define ART_EMPTY_SLOT 255
 
+typedef enum { NODE4, NODE16, NODE48, NODE256, LEAF_NODE } NodeType;
+
+struct NodeHeader {
+  NodeType type;
+  uint32_t prefix_len;
+  uint8_t prefix[10];
+};
+
+struct Node4 {
+  NodeHeader header;
+  uint8_t num_children;
+  uint8_t keys[4];
+  void *children[4];
+};
+
+struct Node16 {
+  NodeHeader header;
+  uint8_t num_children;
+  uint8_t keys[16];
+  void *children[16];
+};
+
+struct Node48 {
+  NodeHeader header;
+
+  /* The 256-byte Lookup Map.
+   Every index corresponds to an ASCII character.
+   Valued at 255 if empty, or 0-47 pointing to the slot in the children array.
+  */
+
+  uint8_t child_index[256];
+
+  // Compressed array of actual pointers (saving upto 1.6KB per Node)
+  void *children[48];
+
+  uint8_t num_children;
+};
+
+struct Node256 {
+  NodeHeader header;
+  void *children[256];
+  /* if we use uint8_t, after 255 overflow occurs and the MSB is ignored */
+  uint16_t num_children;
+};
+
+struct ArtLeaf {
+  NodeHeader header;
+  char *key;
+  void *value;
+};
+
+struct ArtTree {
+  void *root;
+  size_t size;
+};
+
 // --- Node Allocators ---
 
 static Node4 *alloc_node4() {
@@ -98,7 +154,9 @@ static int check_prefix(NodeHeader *header, const char *key, int depth) {
 
 static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
   Node16 *new_node = alloc_node16();
-
+  if (new_node == NULL) {
+    return NULL;
+  }
   // 1. Copy the header (preserves the Path Compression prefixes!)
   new_node->header = old_node->header;
   new_node->header.type = NODE16;
@@ -119,6 +177,10 @@ static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
 static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
   Node48 *new_node = alloc_node48();
 
+  if (new_node == NULL) {
+    return NULL;
+  }
+
   new_node->header = old_node->header;
   new_node->header.type = NODE48;
 
@@ -136,6 +198,9 @@ static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
 static Node256 *upgrade_node48_to_node256(Node48 *old_node) {
   Node256 *new_node = alloc_node256();
 
+  if (new_node == NULL) {
+    return NULL;
+  }
   new_node->header = old_node->header;
   new_node->header.type = NODE256;
   new_node->num_children = old_node->num_children;
@@ -332,6 +397,10 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
 
 static Node48 *downgrade_node256_to_node48(Node256 *old_node) {
   Node48 *new_node = alloc_node48();
+
+  if (new_node == NULL) {
+    return NULL;
+  }
   new_node->header = old_node->header;
   new_node->header.type = NODE48;
   new_node->num_children = old_node->num_children;
@@ -350,6 +419,11 @@ static Node48 *downgrade_node256_to_node48(Node256 *old_node) {
 
 static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
   Node16 *new_node = alloc_node16();
+
+  if (new_node == NULL) {
+    return NULL;
+  }
+
   new_node->header = old_node->header;
   new_node->header.type = NODE16;
   new_node->num_children = old_node->num_children;
@@ -369,6 +443,11 @@ static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
 
 static Node4 *downgrade_node16_to_node4(Node16 *old_node) {
   Node4 *new_node = alloc_node4();
+
+  if (new_node == NULL) {
+    return NULL;
+  }
+
   new_node->header = old_node->header;
   new_node->header.type = NODE4;
   new_node->num_children = old_node->num_children;
@@ -490,13 +569,16 @@ static void *recursive_delete(void *node, const char *key, int depth,
       remove_child_node256((Node256 *)node, c);
 
     if (header->type == NODE256 && ((Node256 *)node)->num_children == 48) {
-      return downgrade_node256_to_node48((Node256 *)node);
+      void *smaller = downgrade_node256_to_node48((Node256 *)node);
+      return smaller ? smaller : node; // OOM: stay as Node256, don't lose data
     }
     if (header->type == NODE48 && ((Node48 *)node)->num_children == 16) {
-      return downgrade_node48_to_node16((Node48 *)node);
+      void *smaller = downgrade_node48_to_node16((Node48 *)node);
+      return smaller ? smaller : node; // OOM: stay as Node48
     }
     if (header->type == NODE16 && ((Node16 *)node)->num_children == 4) {
-      return downgrade_node16_to_node4((Node16 *)node);
+      void *smaller = downgrade_node16_to_node4((Node16 *)node);
+      return smaller ? smaller : node; // OOM: stay as Node16
     }
 
     if (header->type == NODE4) {
@@ -584,6 +666,9 @@ static ArtLeaf *find_minimum_leaf(void *node) {
 
 ArtTree *create_art() {
   ArtTree *tree = malloc(sizeof(ArtTree));
+  if (tree == NULL) {
+    return NULL;
+  }
   tree->root = NULL;
   tree->size = 0;
   return tree;
@@ -620,6 +705,8 @@ bool delete_art(ArtTree *tree, const char *key) {
 bool insert_art(ArtTree *tree, const char *key, void *value) {
   if (tree->root == NULL) {
     tree->root = alloc_leaf(key, value);
+    if (tree->root == NULL)
+      return false;
     tree->size++;
     return true;
   }
@@ -627,6 +714,7 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
   void **current_ptr = &tree->root;
   uint8_t *key_bytes = (uint8_t *)key;
   int depth = 0;
+  int key_len = (int)strlen(key);
 
   while (*current_ptr != NULL) {
     NodeHeader *header = (NodeHeader *)*current_ptr;
@@ -645,6 +733,8 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       }
 
       Node4 *new_node4 = alloc_node4();
+      if (new_node4 == NULL)
+        return false;
 
       uint32_t shared_len = (uint32_t)(i - depth);
       new_node4->header.prefix_len = shared_len;
@@ -658,6 +748,10 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       new_node4->num_children++;
 
       ArtLeaf *new_leaf = alloc_leaf(key, value);
+      if (new_leaf == NULL) {
+        free(new_node4); // don't leak the node4 we just built
+        return false;
+      }
       new_node4->keys[1] = (uint8_t)key[i];
       new_node4->children[1] = new_leaf;
       new_node4->num_children++;
@@ -686,7 +780,18 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
       // Now we use the TRUE match_len to determine if we split
       if ((uint32_t)match_len < header->prefix_len) {
+        // Allocate both new nodes BEFORE mutating header->prefix_len so the
+        // tree is never left in a half-modified state on OOM.
         Node4 *new_node = alloc_node4();
+        if (new_node == NULL)
+          return false;
+
+        ArtLeaf *new_leaf = alloc_leaf(key, value);
+        if (new_leaf == NULL) {
+          free(new_node);
+          return false;
+        }
+
         new_node->header.prefix_len = (uint32_t)match_len;
 
         uint32_t save_len = (match_len < 10) ? match_len : 10;
@@ -712,7 +817,7 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
         uint8_t new_char = (uint8_t)key[match_len + depth];
         new_node->keys[1] = new_char;
-        new_node->children[1] = alloc_leaf(key, value);
+        new_node->children[1] = new_leaf;
         new_node->num_children++;
 
         *current_ptr = new_node;
@@ -721,6 +826,9 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       }
 
       depth += header->prefix_len;
+      if (depth > key_len) {
+        return false;
+      }
     }
 
     uint8_t c = key_bytes[depth];
@@ -732,17 +840,25 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
       if (next_ptr == NULL) {
         if (n->num_children < 4) {
+          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          if (new_leaf == NULL)
+            return false;
           n->keys[n->num_children] = c;
-          n->children[n->num_children] = alloc_leaf(key, value);
+          n->children[n->num_children] = new_leaf;
           n->num_children++;
           tree->size++;
           return true;
         } else {
           Node16 *new_node = upgrade_node4_to_node16(n);
+          if (new_node == NULL) // old Node4 still intact, tree valid
+            return false;
           *current_ptr = new_node;
 
+          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          if (new_leaf == NULL)
+            return false;
           new_node->keys[new_node->num_children] = c;
-          new_node->children[new_node->num_children] = alloc_leaf(key, value);
+          new_node->children[new_node->num_children] = new_leaf;
           new_node->num_children++;
           tree->size++;
           return true;
@@ -756,17 +872,25 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
       if (next_ptr == NULL) {
         if (n->num_children < 16) {
+          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          if (new_leaf == NULL)
+            return false;
           n->keys[n->num_children] = c;
-          n->children[n->num_children] = alloc_leaf(key, value);
+          n->children[n->num_children] = new_leaf;
           n->num_children++;
           tree->size++;
           return true;
         } else {
           Node48 *new_node = upgrade_node16_to_node48(n);
+          if (new_node == NULL) // old Node16 still intact
+            return false;
           *current_ptr = new_node;
 
+          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          if (new_leaf == NULL)
+            return false;
           uint8_t new_index = new_node->num_children;
-          new_node->children[new_index] = alloc_leaf(key, value);
+          new_node->children[new_index] = new_leaf;
           new_node->child_index[c] = new_index;
           new_node->num_children++;
 
@@ -782,17 +906,25 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
       if (next_ptr == NULL) {
         if (n->num_children < 48) {
+          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          if (new_leaf == NULL)
+            return false;
           uint8_t new_index = n->num_children;
-          n->children[new_index] = alloc_leaf(key, value);
+          n->children[new_index] = new_leaf;
           n->child_index[c] = new_index;
           n->num_children++;
           tree->size++;
           return true;
         } else {
           Node256 *new_node = upgrade_node48_to_node256(n);
+          if (new_node == NULL) // old Node48 still intact
+            return false;
           *current_ptr = new_node;
 
-          new_node->children[c] = alloc_leaf(key, value);
+          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          if (new_leaf == NULL)
+            return false;
+          new_node->children[c] = new_leaf;
           new_node->num_children++;
           tree->size++;
           return true;
@@ -805,7 +937,10 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       next_ptr = find_child_node256(n, c);
 
       if (*next_ptr == NULL) {
-        *next_ptr = alloc_leaf(key, value);
+        ArtLeaf *new_leaf = alloc_leaf(key, value);
+        if (new_leaf == NULL)
+          return false;
+        *next_ptr = new_leaf;
         n->num_children++;
         tree->size++;
         return true;

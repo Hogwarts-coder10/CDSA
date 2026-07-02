@@ -1,10 +1,23 @@
 #include "CDSA/hashmap.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define TOMBSTONE ((char *)-1)
+
+struct HashEntry {
+  char *key;
+  void *value;
+};
+
+struct HashMap {
+  size_t capacity;
+  size_t size;
+  size_t occupied;
+  struct HashEntry *entries;
+};
 
 HashMap *create_hashmap(size_t capacity) {
   HashMap *map = malloc(sizeof(HashMap));
@@ -13,8 +26,12 @@ HashMap *create_hashmap(size_t capacity) {
     return NULL;
   }
 
-  map->size = 0;
+  if (capacity == 0) {
+    capacity = 1;
+  }
 
+  map->size = 0;
+  map->occupied = 0;
   map->capacity = capacity;
 
   map->entries = calloc(capacity, sizeof(HashEntry));
@@ -28,6 +45,8 @@ HashMap *create_hashmap(size_t capacity) {
 }
 
 void free_hashmap(HashMap *map) {
+  if (map == NULL)
+    return;
   free(map->entries);
   free(map);
 }
@@ -41,30 +60,42 @@ size_t hash_function(const char *key, size_t capacity) {
   return hash % capacity;
 }
 
-void insert_hashmap(HashMap *map, const char *key, void *value) {
-  if (map->size >= (map->capacity * 3) / 4) {
+bool insert_hashmap(HashMap *map, const char *key, void *value) {
+  if (map->occupied >= (map->capacity * 3) / 4) {
     if (!resize_hashmap(map)) {
       // OOM and couldn't grow. Don't recurse - that's how you get a
       // stack overflow under sustained memory pressure. Drop the insert
       // and let the caller know via a return value if you add one later.
-      return;
+      return false;
     }
   }
 
   size_t index = hash_function(key, map->capacity);
+  size_t first_tombstone = (size_t)-1; // no tombstone seen yet
 
   while (map->entries[index].key != NULL) {
-    if (map->entries[index].key != TOMBSTONE &&
-        strcmp(map->entries[index].key, key) == 0) {
-      map->entries[index].value = value;
-      return;
+    if (map->entries[index].key == TOMBSTONE) {
+      if (first_tombstone == (size_t)-1)
+        first_tombstone = index; // remember first reusable slot
+    } else if (strcmp(map->entries[index].key, key) == 0) {
+      map->entries[index].value = value; // update existing key
+      return true;
     }
     index = (index + 1) % map->capacity;
+  }
+
+  // Prefer reusing a tombstone slot over consuming a fresh NULL slot
+  if (first_tombstone != (size_t)-1) {
+    index = first_tombstone;
+    // occupied unchanged — tombstone was already counted
+  } else {
+    map->occupied++; // claiming a genuinely fresh NULL slot
   }
 
   map->entries[index].key = (char *)key;
   map->entries[index].value = value;
   map->size++;
+  return true;
 }
 
 void print_hashmap(HashMap *map) {
@@ -128,6 +159,8 @@ bool resize_hashmap(HashMap *map) {
       insert_hashmap(map, old_entries[i].key, old_entries[i].value);
     }
   }
+
+  map->occupied = map->size; // tombstones are gone after rebuild
 
   free(old_entries);
   printf("[System] HashMap resized to capacity: %zu\n", map->capacity);

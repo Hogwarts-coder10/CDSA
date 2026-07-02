@@ -1,6 +1,11 @@
 #include "CDSA/deque.h"
+#include "CDSA/ringbuffer.h"
 #include <stdlib.h>
 #include <string.h>
+
+struct Deque {
+  RingBuffer *rb;
+};
 
 // --- Core Lifecycle ---
 
@@ -29,21 +34,21 @@ void free_deque(Deque *deque) {
 
 // --- Front Operations ---
 
-bool push_front(Deque *deque, void *elem) {
+bool push_front_deque(Deque *deque, void *elem) {
   return push_front_ringbuffer(deque->rb, elem);
 }
 
-void pop_front(Deque *deque) { pop_front_ringbuffer(deque->rb); }
+void pop_front_deque(Deque *deque) { pop_front_ringbuffer(deque->rb); }
 
 void *front_deque(Deque *deque) { return front_ringbuffer(deque->rb); }
 
 // --- Back Operations ---
 
-bool push_back(Deque *deque, void *elem) {
+bool push_back_deque(Deque *deque, void *elem) {
   return push_back_ringbuffer(deque->rb, elem);
 }
 
-void pop_back(Deque *deque) { pop_back_ringbuffer(deque->rb); }
+void pop_back_deque(Deque *deque) { pop_back_ringbuffer(deque->rb); }
 
 void *back_deque(Deque *deque) { return back_ringbuffer(deque->rb); }
 

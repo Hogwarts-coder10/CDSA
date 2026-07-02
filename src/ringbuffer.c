@@ -3,6 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct RingBuffer {
+  void *data;
+  size_t head;
+  size_t tail;
+  size_t size;
+  size_t capacity;
+  size_t elem_size;
+};
+
 // --- Core Lifecycle ---
 
 RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {

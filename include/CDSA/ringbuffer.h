@@ -4,14 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct {
-  void *data;
-  size_t head;
-  size_t tail;
-  size_t size;
-  size_t capacity;
-  size_t elem_size;
-} RingBuffer;
+typedef struct RingBuffer RingBuffer;
 
 RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size);
 void free_ringbuffer(RingBuffer *rb);
