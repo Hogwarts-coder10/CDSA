@@ -1,6 +1,7 @@
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H
 
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -10,13 +11,13 @@ RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size);
 void free_ringbuffer(RingBuffer *rb);
 
 // --- Queue Operations (FIFO) ---
-bool push_back_ringbuffer(RingBuffer *rb, void *elem);
-void pop_front_ringbuffer(RingBuffer *rb);
+CDSA_STATUS push_back_ringbuffer(RingBuffer *rb, void *elem);
+CDSA_STATUS pop_front_ringbuffer(RingBuffer *rb);
 void *front_ringbuffer(RingBuffer *rb);
 
 // --- Deque Operations (Double-Ended) ---
-bool push_front_ringbuffer(RingBuffer *rb, void *elem);
-void pop_back_ringbuffer(RingBuffer *rb);
+CDSA_STATUS push_front_ringbuffer(RingBuffer *rb, void *elem);
+CDSA_STATUS pop_back_ringbuffer(RingBuffer *rb);
 void *back_ringbuffer(RingBuffer *rb);
 
 // --- Utilities ---

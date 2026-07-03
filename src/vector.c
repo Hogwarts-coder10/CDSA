@@ -1,4 +1,5 @@
 #include "CDSA/vector.h"
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,9 +31,9 @@ Vector *create_vector(size_t elem_size) {
   return vec;
 }
 
-void push_vector(Vector *vec, void *elem) {
+CDSA_STATUS push_vector(Vector *vec, void *elem) {
   if (vec == NULL || elem == NULL)
-    return;
+    return CDSA_ERR_INVALID;
 
   if (vec->size >= vec->capacity) {
     vec->capacity *= 2;
@@ -40,13 +41,15 @@ void push_vector(Vector *vec, void *elem) {
     // fails!
     void *temp = realloc(vec->data, vec->capacity * vec->elem_size);
     if (temp == NULL)
-      return;
+      return CDSA_ERR_OOM;
     vec->data = temp;
   }
 
   void *target = (char *)vec->data + (vec->size * vec->elem_size);
   memcpy(target, elem, vec->elem_size);
   vec->size++;
+
+  return CDSA_OK;
 }
 
 void *get_vector(Vector *vec, size_t index) {
@@ -62,11 +65,17 @@ void free_vector(Vector *vec) {
   free(vec);
 }
 
-void pop_vector(Vector *vec) {
-  if (vec == NULL)
-    return;
-  if (vec->size > 0)
-    vec->size--;
+CDSA_STATUS pop_vector(Vector *vec) {
+  if (vec == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
+  if (vec->size == 0) {
+    return CDSA_ERR_NOT_FOUND;
+  }
+
+  vec->size--;
+  return CDSA_OK;
 }
 
 void *front_vector(Vector *vec) {
@@ -93,11 +102,18 @@ size_t capacity_vector(Vector *vec) {
   return vec->capacity;
 }
 
-void set_vector(Vector *vec, size_t index, void *elem) {
-  if (vec == NULL || elem == NULL || index >= vec->size)
-    return;
+CDSA_STATUS set_vector(Vector *vec, size_t index, void *elem) {
+  if (vec == NULL || elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
+  if (index >= vec->size) {
+    return CDSA_ERR_NOT_FOUND;
+  }
+
   void *target = (char *)vec->data + (index * vec->elem_size);
   memcpy(target, elem, vec->elem_size);
+  return CDSA_OK;
 }
 
 void clear_vector(Vector *vec) {

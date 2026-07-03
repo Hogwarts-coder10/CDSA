@@ -1,15 +1,16 @@
 #include "CDSA/skiplist.h"
+#include "CDSA/error.h"
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct SkipNode {
+typedef struct SkipNode {
   double score; // the sorting weight
   char *value;  // the actual data
   int level;    // How tall is this node (1 to MAX_LEVEL)
   struct SkipNode *
       *forward; // array of pointers to the next nodes at higher level
-};
+} SkipNode;
 
 struct SkipList {
   SkipNode *header; // starting node (dummy)
@@ -61,6 +62,7 @@ static SkipNode *create_node(int level, double score, const char *value) {
   node->level = level;
   return node;
 }
+
 // --- Lifecycle ---
 
 SkipList *create_skiplist() {
@@ -100,10 +102,23 @@ void free_skiplist(SkipList *sl) {
 
 // --- Core Operations ---
 
-size_t size_skiplist(SkipList *sl) { return sl->size; }
-int level_skiplist(SkipList *sl) { return sl->level; }
+size_t size_skiplist(SkipList *sl) {
+  if (sl == NULL)
+    return 0;
+  return sl->size;
+}
 
-bool insert_skiplist(SkipList *sl, double score, const char *value) {
+int level_skiplist(SkipList *sl) {
+  if (sl == NULL)
+    return 0;
+  return sl->level;
+}
+
+CDSA_STATUS insert_skiplist(SkipList *sl, double score, const char *value) {
+  if (sl == NULL || value == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   SkipNode *current = sl->header;
 
   // Breadcrumb trail: remembers the last node we saw at each level before
@@ -141,7 +156,7 @@ bool insert_skiplist(SkipList *sl, double score, const char *value) {
   SkipNode *new_node = create_node(new_level, score, value);
   if (new_node == NULL) {
     sl->level = old_level; // undo the level bump, list stays consistent
-    return false;
+    return CDSA_ERR_OOM;
   }
 
   for (int i = 0; i < new_level; i++) {
@@ -150,10 +165,14 @@ bool insert_skiplist(SkipList *sl, double score, const char *value) {
   }
 
   sl->size++;
-  return true;
+  return CDSA_OK;
 }
 
-bool remove_skiplist(SkipList *sl, double score, const char *value) {
+CDSA_STATUS remove_skiplist(SkipList *sl, double score, const char *value) {
+  if (sl == NULL || value == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   SkipNode *current = sl->header;
   SkipNode *update[SKIPLIST_MAX_LEVEL];
 
@@ -199,14 +218,18 @@ bool remove_skiplist(SkipList *sl, double score, const char *value) {
     free(current);
 
     sl->size--;
-    return true; // Successfully deleted
+    return CDSA_OK; // Successfully deleted
   }
 
-  return false; // Node didn't exist
+  return CDSA_ERR_NOT_FOUND; // Node didn't exist
 }
 
 char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
                           int *out_count) {
+  if (sl == NULL || out_count == NULL) {
+    return NULL;
+  }
+
   SkipNode *current = sl->header;
 
   // 1. Fast-forward to the exact starting point using the express lanes

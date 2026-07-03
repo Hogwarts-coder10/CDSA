@@ -1,4 +1,5 @@
 #include "CDSA/stack.h"
+#include "CDSA/error.h"
 #include "CDSA/vector.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -25,19 +26,49 @@ Stack *create_stack(size_t elem_size) {
   return stack;
 }
 
-void push_stack(Stack *stack, void *value) { push_vector(stack->vec, value); }
+CDSA_STATUS push_stack(Stack *stack, void *value) {
+  if (stack == NULL || value == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+  // Vector handles the OOM checks and returns the proper CDSA_STATUS
+  return push_vector(stack->vec, value);
+}
 
 void free_stack(Stack *stack) {
+  if (stack == NULL)
+    return;
   free_vector(stack->vec);
   free(stack);
 }
 
-void pop_stack(Stack *stack) { pop_vector(stack->vec); }
+CDSA_STATUS pop_stack(Stack *stack) {
+  if (stack == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+  // Vector handles the empty checks and returns CDSA_ERR_NOT_FOUND or OK
+  return pop_vector(stack->vec);
+}
 
-void *top_stack(Stack *stack) { return back_vector(stack->vec); }
+void *top_stack(Stack *stack) {
+  if (stack == NULL)
+    return NULL;
+  return back_vector(stack->vec);
+}
 
-size_t size_stack(Stack *stack) { return size_vector(stack->vec); }
+size_t size_stack(Stack *stack) {
+  if (stack == NULL)
+    return 0;
+  return size_vector(stack->vec);
+}
 
-bool is_empty_stack(Stack *stack) { return is_empty_vector(stack->vec); }
+bool is_empty_stack(Stack *stack) {
+  if (stack == NULL)
+    return true;
+  return is_empty_vector(stack->vec);
+}
 
-void clear_stack(Stack *stack) { clear_vector(stack->vec); }
+void clear_stack(Stack *stack) {
+  if (stack == NULL)
+    return;
+  clear_vector(stack->vec);
+}

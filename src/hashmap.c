@@ -1,4 +1,5 @@
 #include "CDSA/hashmap.h"
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -7,16 +8,16 @@
 
 #define TOMBSTONE ((char *)-1)
 
-struct HashEntry {
+typedef struct {
   char *key;
   void *value;
-};
+} HashEntry;
 
 struct HashMap {
   size_t capacity;
   size_t size;
   size_t occupied;
-  struct HashEntry *entries;
+  HashEntry *entries;
 };
 
 HashMap *create_hashmap(size_t capacity) {
@@ -51,9 +52,13 @@ void free_hashmap(HashMap *map) {
   free(map);
 }
 
-size_t size_hashmap(HashMap *map) { return map->size; }
+size_t size_hashmap(HashMap *map) {
+  if (map == NULL)
+    return 0;
+  return map->size;
+}
 
-size_t hash_function(const char *key, size_t capacity) {
+static size_t hash_function(const char *key, size_t capacity) {
   size_t hash = 0;
   while (*key != '\0') {
     hash = (hash * 31) + *key;
@@ -62,13 +67,16 @@ size_t hash_function(const char *key, size_t capacity) {
   return hash % capacity;
 }
 
-bool insert_hashmap(HashMap *map, const char *key, void *value) {
+CDSA_STATUS insert_hashmap(HashMap *map, const char *key, void *value) {
+  if (map == NULL || key == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   if (map->occupied >= (map->capacity * 3) / 4) {
-    if (!resize_hashmap(map)) {
-      // OOM and couldn't grow. Don't recurse - that's how you get a
-      // stack overflow under sustained memory pressure. Drop the insert
-      // and let the caller know via a return value if you add one later.
-      return false;
+    CDSA_STATUS status = resize_hashmap(map);
+    if (status != CDSA_OK) {
+      // OOM and couldn't grow. Propagate the error explicitly.
+      return status;
     }
   }
 
@@ -81,7 +89,7 @@ bool insert_hashmap(HashMap *map, const char *key, void *value) {
         first_tombstone = index; // remember first reusable slot
     } else if (strcmp(map->entries[index].key, key) == 0) {
       map->entries[index].value = value; // update existing key
-      return true;
+      return CDSA_OK;
     }
     index = (index + 1) % map->capacity;
   }
@@ -97,14 +105,17 @@ bool insert_hashmap(HashMap *map, const char *key, void *value) {
   map->entries[index].key = (char *)key;
   map->entries[index].value = value;
   map->size++;
-  return true;
+
+  return CDSA_OK;
 }
 
 void print_hashmap(HashMap *map) {
+  if (map == NULL)
+    return;
+
   for (size_t i = 0; i < map->capacity; i++) {
     // THE SHIELD: Only print if it's not NULL and not a TOMBSTONE
     if (map->entries[i].key != NULL && map->entries[i].key != TOMBSTONE) {
-
       printf("[%zu] %s -> %d\n", i, map->entries[i].key,
              *(int *)map->entries[i].value);
     }
@@ -112,6 +123,9 @@ void print_hashmap(HashMap *map) {
 }
 
 void *get_hashmap(HashMap *map, const char *key) {
+  if (map == NULL || key == NULL)
+    return NULL;
+
   size_t index = hash_function(key, map->capacity);
 
   // Probe until we hit an empty slot
@@ -138,7 +152,10 @@ bool contains_hashmap(HashMap *map, const char *key) {
   return get_hashmap(map, key) != NULL;
 }
 
-bool resize_hashmap(HashMap *map) {
+CDSA_STATUS resize_hashmap(HashMap *map) {
+  if (map == NULL)
+    return CDSA_ERR_INVALID;
+
   size_t old_capacity = map->capacity;
   HashEntry *old_entries = map->entries;
 
@@ -147,7 +164,7 @@ bool resize_hashmap(HashMap *map) {
 
   if (new_entries == NULL) {
     printf("[System] Warning: HashMap resize failed due to OOM.\n");
-    return false;
+    return CDSA_ERR_OOM;
   }
 
   // Swap the new array in BEFORE rehashing, or insert_hashmap below
@@ -166,10 +183,13 @@ bool resize_hashmap(HashMap *map) {
 
   free(old_entries);
   printf("[System] HashMap resized to capacity: %zu\n", map->capacity);
-  return true;
+  return CDSA_OK;
 }
 
-void remove_hashmap(HashMap *map, const char *key) {
+CDSA_STATUS remove_hashmap(HashMap *map, const char *key) {
+  if (map == NULL || key == NULL)
+    return CDSA_ERR_INVALID;
+
   size_t index = hash_function(key, map->capacity);
 
   // Probe until we hit a completely empty slot
@@ -183,9 +203,11 @@ void remove_hashmap(HashMap *map, const char *key) {
       map->entries[index].key = TOMBSTONE;
       map->entries[index].value = NULL;
       map->size--;
-      return;
+      return CDSA_OK;
     }
 
     index = (index + 1) % map->capacity;
   }
+
+  return CDSA_ERR_NOT_FOUND;
 }

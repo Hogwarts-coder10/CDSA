@@ -1,4 +1,5 @@
 #include "CDSA/ringbuffer.h"
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,15 +46,33 @@ void free_ringbuffer(RingBuffer *rb) {
 
 // --- Utilities ---
 
-size_t size_ringbuffer(RingBuffer *rb) { return rb->size; }
-bool is_empty_ringbuffer(RingBuffer *rb) { return rb->size == 0; }
-bool is_full_ringbuffer(RingBuffer *rb) { return rb->size == rb->capacity; }
+size_t size_ringbuffer(RingBuffer *rb) {
+  if (rb == NULL)
+    return 0;
+  return rb->size;
+}
+
+bool is_empty_ringbuffer(RingBuffer *rb) {
+  if (rb == NULL)
+    return true;
+  return rb->size == 0;
+}
+
+bool is_full_ringbuffer(RingBuffer *rb) {
+  if (rb == NULL)
+    return false;
+  return rb->size == rb->capacity;
+}
 
 // --- Queue Operations (FIFO) ---
 
-bool push_back_ringbuffer(RingBuffer *rb, void *elem) {
+CDSA_STATUS push_back_ringbuffer(RingBuffer *rb, void *elem) {
+  if (rb == NULL || elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   if (is_full_ringbuffer(rb)) {
-    return false; // Buffer is full, drop the insertion
+    return CDSA_ERR_FULL; // Buffer is full, drop the insertion explicitly
   }
 
   // Calculate the actual memory address for the tail
@@ -64,22 +83,28 @@ bool push_back_ringbuffer(RingBuffer *rb, void *elem) {
   rb->tail = (rb->tail + 1) % rb->capacity;
   rb->size++;
 
-  return true;
+  return CDSA_OK;
 }
 
-void pop_front_ringbuffer(RingBuffer *rb) {
+CDSA_STATUS pop_front_ringbuffer(RingBuffer *rb) {
+  if (rb == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   if (is_empty_ringbuffer(rb)) {
-    return;
+    return CDSA_ERR_EMPTY;
   }
 
   // THE MAGIC: We don't delete the data or shift the array.
   // We just move the head pointer forward and wrap it around!
   rb->head = (rb->head + 1) % rb->capacity;
   rb->size--;
+
+  return CDSA_OK;
 }
 
 void *front_ringbuffer(RingBuffer *rb) {
-  if (is_empty_ringbuffer(rb)) {
+  if (rb == NULL || is_empty_ringbuffer(rb)) {
     return NULL;
   }
 
@@ -88,9 +113,13 @@ void *front_ringbuffer(RingBuffer *rb) {
 
 // --- Deque Operations (Double-Ended) ---
 
-bool push_front_ringbuffer(RingBuffer *rb, void *elem) {
+CDSA_STATUS push_front_ringbuffer(RingBuffer *rb, void *elem) {
+  if (rb == NULL || elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   if (is_full_ringbuffer(rb)) {
-    return false;
+    return CDSA_ERR_FULL;
   }
 
   // REVERSE MAGIC: Move head backwards, wrapping to the end if it hits 0
@@ -100,21 +129,27 @@ bool push_front_ringbuffer(RingBuffer *rb, void *elem) {
   memcpy(target, elem, rb->elem_size);
 
   rb->size++;
-  return true;
+  return CDSA_OK;
 }
 
-void pop_back_ringbuffer(RingBuffer *rb) {
+CDSA_STATUS pop_back_ringbuffer(RingBuffer *rb) {
+  if (rb == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   if (is_empty_ringbuffer(rb)) {
-    return;
+    return CDSA_ERR_EMPTY;
   }
 
   // REVERSE MAGIC: Move tail backwards, wrapping around
   rb->tail = (rb->tail + rb->capacity - 1) % rb->capacity;
   rb->size--;
+
+  return CDSA_OK;
 }
 
 void *back_ringbuffer(RingBuffer *rb) {
-  if (is_empty_ringbuffer(rb)) {
+  if (rb == NULL || is_empty_ringbuffer(rb)) {
     return NULL;
   }
 

@@ -1,14 +1,16 @@
 #include "CDSA/linkedlist.h"
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-struct Node {
+// Included the self-referential struct fix from earlier
+typedef struct Node {
   void *data;
   struct Node *next;
-};
+} Node;
 
 struct LinkedList {
   Node *head;
@@ -54,34 +56,43 @@ void free_linkedlist(LinkedList *list) {
   free(list);
 }
 
-void push_front_linkedlist(LinkedList *list, void *value) {
+CDSA_STATUS push_front_linkedlist(LinkedList *list, void *value) {
   if (list == NULL || value == NULL)
-    return;
+    return CDSA_ERR_INVALID;
+
   Node *new_node = malloc(sizeof(Node));
   if (new_node == NULL)
-    return;
+    return CDSA_ERR_OOM; // Explicit memory failure
 
   new_node->data = malloc(list->elem_size);
   if (new_node->data == NULL) {
-    free(new_node);
-    return;
+    free(new_node); // Clean up the dangling node before returning
+    return CDSA_ERR_OOM;
   }
 
   memcpy(new_node->data, value, list->elem_size);
   new_node->next = list->head;
   list->head = new_node;
   list->size++;
+
+  return CDSA_OK;
 }
 
-void pop_front_linkedlist(LinkedList *list) {
-  if (list == NULL || list->head == NULL)
-    return;
+CDSA_STATUS pop_front_linkedlist(LinkedList *list) {
+  if (list == NULL)
+    return CDSA_ERR_INVALID;
+
+  if (list->head == NULL)
+    return CDSA_ERR_EMPTY; // Prevent popping from an empty list
+
   Node *old_head = list->head;
   list->head = list->head->next;
 
   free(old_head->data);
   free(old_head);
   list->size--;
+
+  return CDSA_OK;
 }
 
 void clear_linkedlist(LinkedList *list) {
