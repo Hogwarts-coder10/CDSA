@@ -1,6 +1,7 @@
 #ifndef PRIORITY_QUEUE_H
 #define PRIORITY_QUEUE_H
 
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -13,11 +14,11 @@ PriorityQueue *create_pq(size_t elem_size, PriorityCompareFn cmp_func);
 void free_pq(PriorityQueue *pq);
 
 // --- Operations ---
-void push_pq(PriorityQueue *pq, void *elem);
+CDSA_STATUS push_pq(PriorityQueue *pq, void *elem);
 
 // Copies the highest priority element into 'out_elem' and removes it.
 // Returns false if the queue is empty.
-bool pop_pq(PriorityQueue *pq, void *out_elem);
+CDSA_STATUS pop_pq(PriorityQueue *pq, void *out_elem);
 
 // Returns a pointer to the highest priority element without removing it.
 void *peek_pq(PriorityQueue *pq);

@@ -1,4 +1,5 @@
 #include "CDSA/priority_queue.h"
+#include "CDSA/error.h"
 #include "CDSA/vector.h"
 #include <stdlib.h>
 #include <string.h>
@@ -11,14 +12,14 @@ struct PriorityQueue {
 
 // --- Internal Helpers: Heap Math ---
 
-static void sift_up(PriorityQueue *pq, size_t index) {
+static CDSA_STATUS sift_up(PriorityQueue *pq, size_t index) {
   if (index == 0)
-    return;
+    return CDSA_OK;
 
   void *temp = malloc(pq->elem_size);
 
   if (temp == NULL) {
-    return;
+    return CDSA_ERR_OOM; // Catch the memory failure
   }
 
   while (index > 0) {
@@ -40,14 +41,15 @@ static void sift_up(PriorityQueue *pq, size_t index) {
   }
 
   free(temp);
+  return CDSA_OK;
 }
 
-static void sift_down(PriorityQueue *pq, size_t index) {
+static CDSA_STATUS sift_down(PriorityQueue *pq, size_t index) {
   size_t size = size_vector(pq->data);
   void *temp = malloc(pq->elem_size);
 
   if (temp == NULL) {
-    return;
+    return CDSA_ERR_OOM; // Catch the memory failure
   }
 
   while (true) {
@@ -87,6 +89,7 @@ static void sift_down(PriorityQueue *pq, size_t index) {
   }
 
   free(temp);
+  return CDSA_OK;
 }
 
 // --- LifeCycle ---
@@ -118,14 +121,28 @@ void free_pq(PriorityQueue *pq) {
 
 // --- Operations ---
 
-void push_pq(PriorityQueue *pq, void *elem) {
-  push_vector(pq->data, elem);
-  sift_up(pq, size_vector(pq->data) - 1);
+CDSA_STATUS push_pq(PriorityQueue *pq, void *elem) {
+  if (pq == NULL || elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
+  // Push vector handles its own OOM check
+  CDSA_STATUS push_status = push_vector(pq->data, elem);
+  if (push_status != CDSA_OK) {
+    return push_status;
+  }
+
+  return sift_up(pq, size_vector(pq->data) - 1);
 }
 
-bool pop_pq(PriorityQueue *pq, void *out_elem) {
-  if (is_empty_pq(pq))
-    return false;
+CDSA_STATUS pop_pq(PriorityQueue *pq, void *out_elem) {
+  if (pq == NULL || out_elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
+  if (is_empty_pq(pq)) {
+    return CDSA_ERR_EMPTY;
+  }
 
   // 1. Copy the highest priority item to the user's out parameter
   memcpy(out_elem, front_vector(pq->data), pq->elem_size);
@@ -139,16 +156,32 @@ bool pop_pq(PriorityQueue *pq, void *out_elem) {
 
   // 4. Sink the new root down to restore the heap property
   if (!is_empty_pq(pq)) {
-    sift_down(pq, 0);
+    return sift_down(pq, 0);
   }
 
-  return true;
+  return CDSA_OK;
 }
 
-void *peek_pq(PriorityQueue *pq) { return front_vector(pq->data); }
+void *peek_pq(PriorityQueue *pq) {
+  if (pq == NULL)
+    return NULL;
+  return front_vector(pq->data);
+}
 
-size_t size_pq(PriorityQueue *pq) { return size_vector(pq->data); }
+size_t size_pq(PriorityQueue *pq) {
+  if (pq == NULL)
+    return 0;
+  return size_vector(pq->data);
+}
 
-bool is_empty_pq(PriorityQueue *pq) { return is_empty_vector(pq->data); }
+bool is_empty_pq(PriorityQueue *pq) {
+  if (pq == NULL)
+    return true;
+  return is_empty_vector(pq->data);
+}
 
-void clear_pq(PriorityQueue *pq) { clear_vector(pq->data); }
+void clear_pq(PriorityQueue *pq) {
+  if (pq == NULL)
+    return;
+  clear_vector(pq->data);
+}

@@ -1,4 +1,5 @@
 #include "CDSA/queue.h"
+#include "CDSA/error.h"
 #include "CDSA/ringbuffer.h"
 #include <stdlib.h>
 #include <string.h>
@@ -31,22 +32,44 @@ void free_queue(Queue *queue) {
   free(queue);
 }
 
-bool enqueue(Queue *queue, void *elem) {
+CDSA_STATUS enqueue(Queue *queue, void *elem) {
+  if (queue == NULL || elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
   // Enqueue is just a restricted push_back
   return push_back_ringbuffer(queue->rb, elem);
 }
 
-void dequeue(Queue *queue) {
+CDSA_STATUS dequeue(Queue *queue) {
+  if (queue == NULL) {
+    return CDSA_ERR_INVALID;
+  }
   // Dequeue is just a restricted pop_front
-  pop_front_ringbuffer(queue->rb);
+  return pop_front_ringbuffer(queue->rb);
 }
 
-void *front_queue(Queue *queue) { return front_ringbuffer(queue->rb); }
+void *front_queue(Queue *queue) {
+  if (queue == NULL)
+    return NULL;
+  return front_ringbuffer(queue->rb);
+}
 
 // --- Utilities ---
 
-size_t size_queue(Queue *queue) { return size_ringbuffer(queue->rb); }
+size_t size_queue(Queue *queue) {
+  if (queue == NULL)
+    return 0;
+  return size_ringbuffer(queue->rb);
+}
 
-bool is_empty_queue(Queue *queue) { return is_empty_ringbuffer(queue->rb); }
+bool is_empty_queue(Queue *queue) {
+  if (queue == NULL)
+    return true;
+  return is_empty_ringbuffer(queue->rb);
+}
 
-bool is_full_queue(Queue *queue) { return is_full_ringbuffer(queue->rb); }
+bool is_full_queue(Queue *queue) {
+  if (queue == NULL)
+    return false;
+  return is_full_ringbuffer(queue->rb);
+}

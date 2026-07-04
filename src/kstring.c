@@ -1,4 +1,5 @@
 #include "CDSA/kstring.h"
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -69,9 +70,9 @@ void clear_kstring(KString *str) {
   str->data[0] = '\0';
 }
 
-void append_kstring(KString *str, const char *text) {
+CDSA_STATUS append_kstring(KString *str, const char *text) {
   if (str == NULL || text == NULL)
-    return;
+    return CDSA_ERR_INVALID;
 
   size_t text_len = strlen(text);
   size_t required_space = str->size + text_len + 1;
@@ -80,14 +81,17 @@ void append_kstring(KString *str, const char *text) {
     while (str->capacity < required_space) {
       str->capacity *= 2;
     }
-    // THE FIX -> Safe memory reallocation
+    // Safe memory reallocation with explicit error reporting
     char *temp = realloc(str->data, str->capacity);
-    if (temp == NULL)
-      return;
+    if (temp == NULL) {
+      return CDSA_ERR_OOM; // The caller now knows it truncated!
+    }
     str->data = temp;
   }
 
   memcpy(str->data + str->size, text, text_len);
   str->size += text_len;
   str->data[str->size] = '\0';
+
+  return CDSA_OK;
 }

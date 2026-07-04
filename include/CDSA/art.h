@@ -1,6 +1,7 @@
 #ifndef ART_H
 #define ART_H
 
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -24,9 +25,9 @@ ArtTree *create_art();
 void free_art(ArtTree *tree);
 
 // Core Operations
-bool insert_art(ArtTree *tree, const char *key, void *value);
+CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value);
 void *search_art(ArtTree *tree, const char *key);
 void print_art(ArtTree *tree);
-bool delete_art(ArtTree *tree, const char *key);
+CDSA_STATUS delete_art(ArtTree *tree, const char *key);
 size_t size_art(ArtTree *tree);
 #endif

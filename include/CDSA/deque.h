@@ -1,6 +1,7 @@
 #ifndef DEQUE_H
 #define DEQUE_H
 
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -11,13 +12,13 @@ Deque *create_deque(size_t capacity, size_t elem_size);
 void free_deque(Deque *dequeue);
 
 // --- Front Operations ---
-bool push_front_deque(Deque *deque, void *elem);
-void pop_front_deque(Deque *deque);
+CDSA_STATUS push_front_deque(Deque *deque, void *elem);
+CDSA_STATUS pop_front_deque(Deque *deque);
 void *front_deque(Deque *deque);
 
 // --- Back Operations ---
-bool push_back_deque(Deque *deque, void *elem);
-void pop_back_deque(Deque *deque);
+CDSA_STATUS push_back_deque(Deque *deque, void *elem);
+CDSA_STATUS pop_back_deque(Deque *deque);
 void *back_deque(Deque *deque);
 
 // --- Utilities ---

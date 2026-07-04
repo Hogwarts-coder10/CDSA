@@ -1,4 +1,5 @@
 #include "CDSA/deque.h"
+#include "CDSA/error.h"
 #include "CDSA/ringbuffer.h"
 #include <stdlib.h>
 #include <string.h>
@@ -34,28 +35,64 @@ void free_deque(Deque *deque) {
 
 // --- Front Operations ---
 
-bool push_front_deque(Deque *deque, void *elem) {
+CDSA_STATUS push_front_deque(Deque *deque, void *elem) {
+  if (deque == NULL || elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
   return push_front_ringbuffer(deque->rb, elem);
 }
 
-void pop_front_deque(Deque *deque) { pop_front_ringbuffer(deque->rb); }
+CDSA_STATUS pop_front_deque(Deque *deque) {
+  if (deque == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+  return pop_front_ringbuffer(deque->rb);
+}
 
-void *front_deque(Deque *deque) { return front_ringbuffer(deque->rb); }
+void *front_deque(Deque *deque) {
+  if (deque == NULL)
+    return NULL;
+  return front_ringbuffer(deque->rb);
+}
 
 // --- Back Operations ---
 
-bool push_back_deque(Deque *deque, void *elem) {
+CDSA_STATUS push_back_deque(Deque *deque, void *elem) {
+  if (deque == NULL || elem == NULL) {
+    return CDSA_ERR_INVALID;
+  }
   return push_back_ringbuffer(deque->rb, elem);
 }
 
-void pop_back_deque(Deque *deque) { pop_back_ringbuffer(deque->rb); }
+CDSA_STATUS pop_back_deque(Deque *deque) {
+  if (deque == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+  return pop_back_ringbuffer(deque->rb);
+}
 
-void *back_deque(Deque *deque) { return back_ringbuffer(deque->rb); }
+void *back_deque(Deque *deque) {
+  if (deque == NULL)
+    return NULL;
+  return back_ringbuffer(deque->rb);
+}
 
 // --- Utilities ---
 
-size_t size_deque(Deque *deque) { return size_ringbuffer(deque->rb); }
+size_t size_deque(Deque *deque) {
+  if (deque == NULL)
+    return 0;
+  return size_ringbuffer(deque->rb);
+}
 
-bool is_empty_deque(Deque *deque) { return is_empty_ringbuffer(deque->rb); }
+bool is_empty_deque(Deque *deque) {
+  if (deque == NULL)
+    return true;
+  return is_empty_ringbuffer(deque->rb);
+}
 
-bool is_full_deque(Deque *deque) { return is_full_ringbuffer(deque->rb); }
+bool is_full_deque(Deque *deque) {
+  if (deque == NULL)
+    return false;
+  return is_full_ringbuffer(deque->rb);
+}

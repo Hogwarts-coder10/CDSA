@@ -1,4 +1,5 @@
 #include "CDSA/art.h"
+#include "CDSA/error.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -681,11 +682,17 @@ void free_art(ArtTree *tree) {
   free(tree);
 }
 
-size_t size_art(ArtTree *tree) { return tree->size; }
+size_t size_art(ArtTree *tree) {
+  if (tree == NULL)
+    return 0;
+  return tree->size;
+}
 
 void print_art(ArtTree *tree) {
+  if (tree == NULL)
+    return;
   printf("\n=== 🌲 ART TREE DUMP (Total Keys: %zu) ===\n", tree->size);
-  if (tree == NULL || tree->root == NULL) {
+  if (tree->root == NULL) {
     printf("Tree is empty.\n");
   } else {
     bool is_last[256] = {false};
@@ -694,23 +701,31 @@ void print_art(ArtTree *tree) {
   printf("==========================================\n\n");
 }
 
-bool delete_art(ArtTree *tree, const char *key) {
-  if (tree == NULL || tree->root == NULL)
-    return false;
+CDSA_STATUS delete_art(ArtTree *tree, const char *key) {
+  if (tree == NULL || key == NULL)
+    return CDSA_ERR_INVALID;
+
+  if (tree->root == NULL)
+    return CDSA_ERR_NOT_FOUND;
 
   bool deleted = false;
   tree->root = recursive_delete(tree->root, key, 0, &deleted, tree);
-  return deleted;
+
+  return deleted ? CDSA_OK : CDSA_ERR_NOT_FOUND;
 }
 
 // --- Main Engine: Insert ---
-bool insert_art(ArtTree *tree, const char *key, void *value) {
+CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value) {
+  if (tree == NULL || key == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   if (tree->root == NULL) {
     tree->root = alloc_leaf(key, value);
     if (tree->root == NULL)
-      return false;
+      return CDSA_ERR_OOM;
     tree->size++;
-    return true;
+    return CDSA_OK;
   }
 
   void **current_ptr = &tree->root;
@@ -731,12 +746,12 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
       if (leaf->key[i] == '\0' && key[i] == '\0') {
         leaf->value = value;
-        return true;
+        return CDSA_OK;
       }
 
       Node4 *new_node4 = alloc_node4();
       if (new_node4 == NULL)
-        return false;
+        return CDSA_ERR_OOM;
 
       uint32_t shared_len = (uint32_t)(i - depth);
       new_node4->header.prefix_len = shared_len;
@@ -752,7 +767,7 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       ArtLeaf *new_leaf = alloc_leaf(key, value);
       if (new_leaf == NULL) {
         free(new_node4); // don't leak the node4 we just built
-        return false;
+        return CDSA_ERR_OOM;
       }
       new_node4->keys[1] = (uint8_t)key[i];
       new_node4->children[1] = new_leaf;
@@ -760,7 +775,7 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
       *current_ptr = new_node4;
       tree->size++;
-      return true;
+      return CDSA_OK;
     }
 
     if (header->prefix_len > 0) {
@@ -786,12 +801,12 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
         // tree is never left in a half-modified state on OOM.
         Node4 *new_node = alloc_node4();
         if (new_node == NULL)
-          return false;
+          return CDSA_ERR_OOM;
 
         ArtLeaf *new_leaf = alloc_leaf(key, value);
         if (new_leaf == NULL) {
           free(new_node);
-          return false;
+          return CDSA_ERR_OOM;
         }
 
         new_node->header.prefix_len = (uint32_t)match_len;
@@ -824,12 +839,12 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
 
         *current_ptr = new_node;
         tree->size++;
-        return true;
+        return CDSA_OK;
       }
 
       depth += header->prefix_len;
       if (depth > key_len) {
-        return false;
+        return CDSA_ERR_INVALID;
       }
     }
 
@@ -844,26 +859,26 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
         if (n->num_children < 4) {
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
-            return false;
+            return CDSA_ERR_OOM;
           n->keys[n->num_children] = c;
           n->children[n->num_children] = new_leaf;
           n->num_children++;
           tree->size++;
-          return true;
+          return CDSA_OK;
         } else {
           Node16 *new_node = upgrade_node4_to_node16(n);
           if (new_node == NULL) // old Node4 still intact, tree valid
-            return false;
+            return CDSA_ERR_OOM;
           *current_ptr = new_node;
 
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
-            return false;
+            return CDSA_ERR_OOM;
           new_node->keys[new_node->num_children] = c;
           new_node->children[new_node->num_children] = new_leaf;
           new_node->num_children++;
           tree->size++;
-          return true;
+          return CDSA_OK;
         }
       }
     }
@@ -876,28 +891,28 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
         if (n->num_children < 16) {
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
-            return false;
+            return CDSA_ERR_OOM;
           n->keys[n->num_children] = c;
           n->children[n->num_children] = new_leaf;
           n->num_children++;
           tree->size++;
-          return true;
+          return CDSA_OK;
         } else {
           Node48 *new_node = upgrade_node16_to_node48(n);
           if (new_node == NULL) // old Node16 still intact
-            return false;
+            return CDSA_ERR_OOM;
           *current_ptr = new_node;
 
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
-            return false;
+            return CDSA_ERR_OOM;
           uint8_t new_index = new_node->num_children;
           new_node->children[new_index] = new_leaf;
           new_node->child_index[c] = new_index;
           new_node->num_children++;
 
           tree->size++;
-          return true;
+          return CDSA_OK;
         }
       }
     }
@@ -910,26 +925,26 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
         if (n->num_children < 48) {
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
-            return false;
+            return CDSA_ERR_OOM;
           uint8_t new_index = n->num_children;
           n->children[new_index] = new_leaf;
           n->child_index[c] = new_index;
           n->num_children++;
           tree->size++;
-          return true;
+          return CDSA_OK;
         } else {
           Node256 *new_node = upgrade_node48_to_node256(n);
           if (new_node == NULL) // old Node48 still intact
-            return false;
+            return CDSA_ERR_OOM;
           *current_ptr = new_node;
 
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
-            return false;
+            return CDSA_ERR_OOM;
           new_node->children[c] = new_leaf;
           new_node->num_children++;
           tree->size++;
-          return true;
+          return CDSA_OK;
         }
       }
     }
@@ -941,11 +956,11 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
       if (*next_ptr == NULL) {
         ArtLeaf *new_leaf = alloc_leaf(key, value);
         if (new_leaf == NULL)
-          return false;
+          return CDSA_ERR_OOM;
         *next_ptr = new_leaf;
         n->num_children++;
         tree->size++;
-        return true;
+        return CDSA_OK;
       }
     }
 
@@ -953,12 +968,12 @@ bool insert_art(ArtTree *tree, const char *key, void *value) {
     depth++;
   }
 
-  return false;
+  return CDSA_ERR_INVALID;
 }
 
 // --- Main Engine: Search ---
 void *search_art(ArtTree *tree, const char *key) {
-  if (tree == NULL || tree->root == NULL)
+  if (tree == NULL || key == NULL || tree->root == NULL)
     return NULL;
 
   void *current = tree->root;
