@@ -1,4 +1,5 @@
 #include "CDSA/priority_queue.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include "CDSA/vector.h"
 #include <stdlib.h>
@@ -16,7 +17,7 @@ static CDSA_STATUS sift_up(PriorityQueue *pq, size_t index) {
   if (index == 0)
     return CDSA_OK;
 
-  void *temp = malloc(pq->elem_size);
+  void *temp = CDSA_MALLOC(pq->elem_size);
 
   if (temp == NULL) {
     return CDSA_ERR_OOM; // Catch the memory failure
@@ -40,13 +41,13 @@ static CDSA_STATUS sift_up(PriorityQueue *pq, size_t index) {
     }
   }
 
-  free(temp);
+  CDSA_FREE(temp);
   return CDSA_OK;
 }
 
 static CDSA_STATUS sift_down(PriorityQueue *pq, size_t index) {
   size_t size = size_vector(pq->data);
-  void *temp = malloc(pq->elem_size);
+  void *temp = CDSA_MALLOC(pq->elem_size);
 
   if (temp == NULL) {
     return CDSA_ERR_OOM; // Catch the memory failure
@@ -88,14 +89,14 @@ static CDSA_STATUS sift_down(PriorityQueue *pq, size_t index) {
     }
   }
 
-  free(temp);
+  CDSA_FREE(temp);
   return CDSA_OK;
 }
 
 // --- LifeCycle ---
 
 PriorityQueue *create_pq(size_t elem_size, PriorityCompareFn cmp_func) {
-  PriorityQueue *pq = malloc(sizeof(PriorityQueue));
+  PriorityQueue *pq = CDSA_MALLOC(sizeof(PriorityQueue));
 
   if (pq == NULL) {
     return NULL;
@@ -104,7 +105,7 @@ PriorityQueue *create_pq(size_t elem_size, PriorityCompareFn cmp_func) {
   pq->data = create_vector(elem_size);
 
   if (pq->data == NULL) {
-    free(pq);
+    CDSA_FREE(pq);
     return NULL;
   }
   pq->elem_size = elem_size;
@@ -116,7 +117,7 @@ void free_pq(PriorityQueue *pq) {
   if (pq == NULL)
     return;
   free_vector(pq->data);
-  free(pq);
+  CDSA_FREE(pq);
 }
 
 // --- Operations ---

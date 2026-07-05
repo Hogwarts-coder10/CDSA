@@ -1,4 +1,5 @@
 #include "CDSA/deque.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include "CDSA/ringbuffer.h"
 #include <stdlib.h>
@@ -11,7 +12,7 @@ struct Deque {
 // --- Core Lifecycle ---
 
 Deque *create_deque(size_t capacity, size_t elem_size) {
-  Deque *deque = malloc(sizeof(Deque));
+  Deque *deque = CDSA_MALLOC(sizeof(Deque));
 
   if (deque == NULL) {
     return NULL;
@@ -20,7 +21,7 @@ Deque *create_deque(size_t capacity, size_t elem_size) {
   deque->rb = create_ringbuffer(capacity, elem_size);
 
   if (deque->rb == NULL) {
-    free(deque);
+    CDSA_FREE(deque);
     return NULL;
   }
   return deque;
@@ -30,7 +31,7 @@ void free_deque(Deque *deque) {
   if (deque == NULL)
     return;
   free_ringbuffer(deque->rb);
-  free(deque);
+  CDSA_FREE(deque);
 }
 
 // --- Front Operations ---

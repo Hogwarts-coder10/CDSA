@@ -1,4 +1,5 @@
 #include "CDSA/linkedlist.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -19,7 +20,7 @@ struct LinkedList {
 };
 
 LinkedList *create_linkedlist(size_t elem_size) {
-  LinkedList *list = malloc(sizeof(LinkedList));
+  LinkedList *list = CDSA_MALLOC(sizeof(LinkedList));
   if (list == NULL)
     return NULL;
   list->head = NULL;
@@ -49,24 +50,24 @@ void free_linkedlist(LinkedList *list) {
   while (current != NULL) {
     next = current->next;
     if (current->data != NULL)
-      free(current->data);
-    free(current);
+      CDSA_FREE(current->data);
+    CDSA_FREE(current);
     current = next;
   }
-  free(list);
+  CDSA_FREE(list);
 }
 
 CDSA_STATUS push_front_linkedlist(LinkedList *list, void *value) {
   if (list == NULL || value == NULL)
     return CDSA_ERR_INVALID;
 
-  Node *new_node = malloc(sizeof(Node));
+  Node *new_node = CDSA_MALLOC(sizeof(Node));
   if (new_node == NULL)
     return CDSA_ERR_OOM; // Explicit memory failure
 
-  new_node->data = malloc(list->elem_size);
+  new_node->data = CDSA_MALLOC(list->elem_size);
   if (new_node->data == NULL) {
-    free(new_node); // Clean up the dangling node before returning
+    CDSA_FREE(new_node); // Clean up the dangling node before returning
     return CDSA_ERR_OOM;
   }
 
@@ -88,8 +89,8 @@ CDSA_STATUS pop_front_linkedlist(LinkedList *list) {
   Node *old_head = list->head;
   list->head = list->head->next;
 
-  free(old_head->data);
-  free(old_head);
+  CDSA_FREE(old_head->data);
+  CDSA_FREE(old_head);
   list->size--;
 
   return CDSA_OK;
@@ -104,8 +105,8 @@ void clear_linkedlist(LinkedList *list) {
   while (current != NULL) {
     next = current->next;
     if (current->data != NULL)
-      free(current->data);
-    free(current);
+      CDSA_FREE(current->data);
+    CDSA_FREE(current);
     current = next;
   }
   list->head = NULL;

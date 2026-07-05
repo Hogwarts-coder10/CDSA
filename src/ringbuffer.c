@@ -1,4 +1,5 @@
 #include "CDSA/ringbuffer.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
 #include <stdlib.h>
@@ -16,7 +17,7 @@ struct RingBuffer {
 // --- Core Lifecycle ---
 
 RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
-  RingBuffer *rb = malloc(sizeof(RingBuffer));
+  RingBuffer *rb = CDSA_MALLOC(sizeof(RingBuffer));
   if (rb == NULL) {
     return NULL;
   }
@@ -28,9 +29,9 @@ RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
   rb->tail = 0;
 
   // Allocate the continuous block of memory
-  rb->data = malloc(capacity * elem_size);
+  rb->data = CDSA_MALLOC(capacity * elem_size);
   if (rb->data == NULL) {
-    free(rb);
+    CDSA_FREE(rb);
     return NULL;
   }
 
@@ -40,8 +41,8 @@ RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
 void free_ringbuffer(RingBuffer *rb) {
   if (rb == NULL)
     return;
-  free(rb->data);
-  free(rb);
+  CDSA_FREE(rb->data);
+  CDSA_FREE(rb);
 }
 
 // --- Utilities ---

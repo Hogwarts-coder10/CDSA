@@ -1,4 +1,5 @@
 #include "CDSA/skiplist.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stddef.h>
 #include <stdlib.h>
@@ -34,27 +35,27 @@ static int random_level() {
 // Portable strdup — no POSIX feature-test macro required
 static char *safe_strdup(const char *s) {
   size_t len = strlen(s) + 1;
-  char *dup = malloc(len);
+  char *dup = CDSA_MALLOC(len);
   if (dup)
     memcpy(dup, s, len);
   return dup;
 }
 
 static SkipNode *create_node(int level, double score, const char *value) {
-  SkipNode *node = malloc(sizeof(SkipNode));
+  SkipNode *node = CDSA_MALLOC(sizeof(SkipNode));
   if (node == NULL)
     return NULL;
 
   node->value = safe_strdup(value); // portable, no implicit-decl risk
   if (node->value == NULL) {
-    free(node);
+    CDSA_FREE(node);
     return NULL;
   }
 
-  node->forward = calloc(level, sizeof(SkipNode *));
+  node->forward = CDSA_CALLOC(level, sizeof(SkipNode *));
   if (node->forward == NULL) {
-    free(node->value);
-    free(node);
+    CDSA_FREE(node->value);
+    CDSA_FREE(node);
     return NULL;
   }
 
@@ -66,7 +67,7 @@ static SkipNode *create_node(int level, double score, const char *value) {
 // --- Lifecycle ---
 
 SkipList *create_skiplist() {
-  SkipList *sl = malloc(sizeof(SkipList));
+  SkipList *sl = CDSA_MALLOC(sizeof(SkipList));
 
   if (sl == NULL) {
     return NULL;
@@ -78,7 +79,7 @@ SkipList *create_skiplist() {
   sl->header = create_node(SKIPLIST_MAX_LEVEL, 0.0, "");
 
   if (sl->header == NULL) {
-    free(sl);
+    CDSA_FREE(sl);
     return NULL;
   }
 
@@ -92,12 +93,12 @@ void free_skiplist(SkipList *sl) {
   SkipNode *current = sl->header;
   while (current != NULL) {
     SkipNode *next = current->forward[0]; // Level 0 is a standard linked list
-    free(current->value);
-    free(current->forward); // Free the dynamic array of pointers
-    free(current);
+    CDSA_FREE(current->value);
+    CDSA_FREE(current->forward); // Free the dynamic array of pointers
+    CDSA_FREE(current);
     current = next;
   }
-  free(sl);
+  CDSA_FREE(sl);
 }
 
 // --- Core Operations ---
@@ -213,9 +214,9 @@ CDSA_STATUS remove_skiplist(SkipList *sl, double score, const char *value) {
     }
 
     // 5. Safely return the memory to the OS
-    free(current->value);
-    free(current->forward);
-    free(current);
+    CDSA_FREE(current->value);
+    CDSA_FREE(current->forward);
+    CDSA_FREE(current);
 
     sl->size--;
     return CDSA_OK; // Successfully deleted
@@ -256,7 +257,7 @@ char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
     return NULL; // Nobody in this range!
 
   // 3. Allocate an array of string pointers
-  char **results = malloc(count * sizeof(char *));
+  char **results = CDSA_MALLOC(count * sizeof(char *));
   if (results == NULL) {
     *out_count = 0;
     return NULL;
@@ -271,8 +272,8 @@ char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
     if (results[idx] == NULL) {
       // Free every string we already duplicated, then the array itself
       for (int j = 0; j < idx; j++)
-        free(results[j]);
-      free(results);
+        CDSA_FREE(results[j]);
+      CDSA_FREE(results);
       *out_count = 0;
       return NULL;
     }

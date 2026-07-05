@@ -1,4 +1,5 @@
 #include "CDSA/hashmap.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -21,7 +22,7 @@ struct HashMap {
 };
 
 HashMap *create_hashmap(size_t capacity) {
-  HashMap *map = malloc(sizeof(HashMap));
+  HashMap *map = CDSA_MALLOC(sizeof(HashMap));
 
   if (map == NULL) {
     return NULL;
@@ -35,10 +36,10 @@ HashMap *create_hashmap(size_t capacity) {
   map->occupied = 0;
   map->capacity = capacity;
 
-  map->entries = calloc(capacity, sizeof(HashEntry));
+  map->entries = CDSA_CALLOC(capacity, sizeof(HashEntry));
 
   if (map->entries == NULL) {
-    free(map);
+    CDSA_FREE(map); // Fixed here
     return NULL;
   }
 
@@ -48,8 +49,8 @@ HashMap *create_hashmap(size_t capacity) {
 void free_hashmap(HashMap *map) {
   if (map == NULL)
     return;
-  free(map->entries);
-  free(map);
+  CDSA_FREE(map->entries);
+  CDSA_FREE(map);
 }
 
 size_t size_hashmap(HashMap *map) {
@@ -160,7 +161,7 @@ CDSA_STATUS resize_hashmap(HashMap *map) {
   HashEntry *old_entries = map->entries;
 
   size_t new_capacity = map->capacity * 2;
-  HashEntry *new_entries = calloc(new_capacity, sizeof(HashEntry));
+  HashEntry *new_entries = CDSA_CALLOC(new_capacity, sizeof(HashEntry));
 
   if (new_entries == NULL) {
     printf("[System] Warning: HashMap resize failed due to OOM.\n");
@@ -181,7 +182,7 @@ CDSA_STATUS resize_hashmap(HashMap *map) {
 
   map->occupied = map->size; // tombstones are gone after rebuild
 
-  free(old_entries);
+  CDSA_FREE(old_entries); // Fixed here
   printf("[System] HashMap resized to capacity: %zu\n", map->capacity);
   return CDSA_OK;
 }

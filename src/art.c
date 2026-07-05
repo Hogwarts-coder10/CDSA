@@ -1,4 +1,5 @@
 #include "CDSA/art.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -68,7 +69,7 @@ struct ArtTree {
 // --- Node Allocators ---
 
 static Node4 *alloc_node4() {
-  Node4 *node = calloc(1, sizeof(Node4));
+  Node4 *node = CDSA_CALLOC(1, sizeof(Node4));
   if (node == NULL) {
     return NULL;
   }
@@ -78,7 +79,7 @@ static Node4 *alloc_node4() {
 }
 
 static Node16 *alloc_node16() {
-  Node16 *node = calloc(1, sizeof(Node16));
+  Node16 *node = CDSA_CALLOC(1, sizeof(Node16));
   if (node == NULL) {
     return NULL;
   }
@@ -88,7 +89,7 @@ static Node16 *alloc_node16() {
 }
 
 static Node48 *alloc_node48() {
-  Node48 *node = calloc(1, sizeof(Node48));
+  Node48 *node = CDSA_CALLOC(1, sizeof(Node48));
   if (node == NULL) {
     return NULL;
   }
@@ -102,7 +103,7 @@ static Node48 *alloc_node48() {
 }
 
 static Node256 *alloc_node256() {
-  Node256 *node = calloc(1, sizeof(Node256));
+  Node256 *node = CDSA_CALLOC(1, sizeof(Node256));
   if (node == NULL) {
     return NULL;
   }
@@ -113,14 +114,14 @@ static Node256 *alloc_node256() {
 
 static char *safe_strdup(const char *s) {
   size_t len = strlen(s) + 1;
-  char *dup = malloc(len);
+  char *dup = CDSA_MALLOC(len);
   if (dup)
     memcpy(dup, s, len);
   return dup;
 }
 
 static ArtLeaf *alloc_leaf(const char *key, void *value) {
-  ArtLeaf *leaf = calloc(1, sizeof(ArtLeaf));
+  ArtLeaf *leaf = CDSA_CALLOC(1, sizeof(ArtLeaf));
   if (leaf == NULL) {
     return NULL;
   }
@@ -128,7 +129,7 @@ static ArtLeaf *alloc_leaf(const char *key, void *value) {
   leaf->header.type = LEAF_NODE;
   leaf->key = safe_strdup(key);
   if (leaf->key == NULL) {
-    free(leaf);
+    CDSA_FREE(leaf);
     return NULL;
   }
   leaf->value = value;
@@ -170,7 +171,7 @@ static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
   }
 
   // 3. Free the old, small node
-  free(old_node);
+  CDSA_FREE(old_node);
 
   return new_node;
 }
@@ -192,7 +193,7 @@ static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
     new_node->child_index[key_char] = (uint8_t)i;
   }
 
-  free(old_node);
+  CDSA_FREE(old_node);
   return new_node;
 }
 
@@ -213,7 +214,7 @@ static Node256 *upgrade_node48_to_node256(Node48 *old_node) {
     }
   }
 
-  free(old_node);
+  CDSA_FREE(old_node);
   return new_node;
 }
 
@@ -258,8 +259,8 @@ static void free_node(void *node) {
 
   if (header->type == LEAF_NODE) {
     ArtLeaf *leaf = (ArtLeaf *)node;
-    free(leaf->key);
-    free(leaf);
+    CDSA_FREE(leaf->key);
+    CDSA_FREE(leaf);
   }
 
   else if (header->type == NODE4) {
@@ -267,7 +268,7 @@ static void free_node(void *node) {
     for (uint16_t i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
     }
-    free(n);
+    CDSA_FREE(n);
   }
 
   else if (header->type == NODE16) {
@@ -275,7 +276,7 @@ static void free_node(void *node) {
     for (uint16_t i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
     }
-    free(n);
+    CDSA_FREE(n);
   }
 
   else if (header->type == NODE48) {
@@ -283,17 +284,17 @@ static void free_node(void *node) {
     for (uint16_t i = 0; i < n->num_children; i++) {
       free_node(n->children[i]);
     }
-    free(n);
+    CDSA_FREE(n);
   }
 
   else if (header->type == NODE256) {
     Node256 *n = (Node256 *)node;
     for (int i = 0; i < 256; i++) {
       if (n->children[i] != NULL) {
-        free_node(n->children[i]);
+        CDSA_FREE(n->children[i]);
       }
     }
-    free(n);
+    CDSA_FREE(n);
   }
 }
 
@@ -414,7 +415,7 @@ static Node48 *downgrade_node256_to_node48(Node256 *old_node) {
       current_idx++;
     }
   }
-  free(old_node);
+  CDSA_FREE(old_node);
   return new_node;
 }
 
@@ -438,7 +439,7 @@ static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
       current_idx++;
     }
   }
-  free(old_node);
+  CDSA_FREE(old_node);
   return new_node;
 }
 
@@ -457,7 +458,7 @@ static Node4 *downgrade_node16_to_node4(Node16 *old_node) {
     new_node->keys[i] = old_node->keys[i];
     new_node->children[i] = old_node->children[i];
   }
-  free(old_node);
+  CDSA_FREE(old_node);
   return new_node;
 }
 
@@ -521,8 +522,8 @@ static void *recursive_delete(void *node, const char *key, int depth,
     if (strcmp(leaf->key, key) == 0) {
       *deleted = true;
       tree->size--;
-      free(leaf->key);
-      free(leaf);
+      CDSA_FREE(leaf->key);
+      CDSA_FREE(leaf);
       return NULL;
     }
     return node;
@@ -606,7 +607,7 @@ static void *recursive_delete(void *node, const char *key, int depth,
           memcpy(child_header->prefix, new_prefix, limit);
         }
 
-        free(n);
+        CDSA_FREE(n);
         return surviving_child;
       }
     }
@@ -666,7 +667,7 @@ static ArtLeaf *find_minimum_leaf(void *node) {
 // --- LifeCycle ---
 
 ArtTree *create_art() {
-  ArtTree *tree = malloc(sizeof(ArtTree));
+  ArtTree *tree = CDSA_MALLOC(sizeof(ArtTree));
   if (tree == NULL) {
     return NULL;
   }
@@ -679,7 +680,7 @@ void free_art(ArtTree *tree) {
   if (tree == NULL)
     return;
   free_node(tree->root);
-  free(tree);
+  CDSA_FREE(tree);
 }
 
 size_t size_art(ArtTree *tree) {
@@ -766,7 +767,7 @@ CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value) {
 
       ArtLeaf *new_leaf = alloc_leaf(key, value);
       if (new_leaf == NULL) {
-        free(new_node4); // don't leak the node4 we just built
+        CDSA_FREE(new_node4); // don't leak the node4 we just built
         return CDSA_ERR_OOM;
       }
       new_node4->keys[1] = (uint8_t)key[i];
@@ -805,7 +806,7 @@ CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value) {
 
         ArtLeaf *new_leaf = alloc_leaf(key, value);
         if (new_leaf == NULL) {
-          free(new_node);
+          CDSA_FREE(new_node);
           return CDSA_ERR_OOM;
         }
 

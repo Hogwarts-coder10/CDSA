@@ -1,4 +1,5 @@
 #include "CDSA/queue.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include "CDSA/ringbuffer.h"
 #include <stdlib.h>
@@ -9,7 +10,7 @@ struct Queue {
 };
 
 Queue *create_queue(size_t capacity, size_t elem_size) {
-  Queue *queue = malloc(sizeof(Queue));
+  Queue *queue = CDSA_MALLOC(sizeof(Queue));
   if (queue == NULL) {
     return NULL;
   }
@@ -17,7 +18,7 @@ Queue *create_queue(size_t capacity, size_t elem_size) {
   queue->rb = create_ringbuffer(capacity, elem_size);
 
   if (queue->rb == NULL) {
-    free(queue);
+    CDSA_FREE(queue);
     return NULL;
   }
 
@@ -29,7 +30,7 @@ void free_queue(Queue *queue) {
     return;
 
   free_ringbuffer(queue->rb);
-  free(queue);
+  CDSA_FREE(queue);
 }
 
 CDSA_STATUS enqueue(Queue *queue, void *elem) {

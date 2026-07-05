@@ -1,4 +1,5 @@
 #include "CDSA/stack.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include "CDSA/vector.h"
 #include <stdbool.h>
@@ -11,7 +12,7 @@ struct Stack {
 };
 
 Stack *create_stack(size_t elem_size) {
-  Stack *stack = malloc(sizeof(Stack));
+  Stack *stack = CDSA_MALLOC(sizeof(Stack));
 
   if (stack == NULL) {
     return NULL;
@@ -19,7 +20,7 @@ Stack *create_stack(size_t elem_size) {
   stack->vec = create_vector(elem_size);
 
   if (stack->vec == NULL) {
-    free(stack);
+    CDSA_FREE(stack);
     return NULL;
   }
 
@@ -38,7 +39,7 @@ void free_stack(Stack *stack) {
   if (stack == NULL)
     return;
   free_vector(stack->vec);
-  free(stack);
+  CDSA_FREE(stack);
 }
 
 CDSA_STATUS pop_stack(Stack *stack) {

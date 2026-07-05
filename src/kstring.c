@@ -1,4 +1,5 @@
 #include "CDSA/kstring.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
 #include <stddef.h>
@@ -15,16 +16,16 @@ struct KString {
 };
 
 KString *create_kstring(void) {
-  KString *str = malloc(sizeof(KString));
+  KString *str = CDSA_MALLOC(sizeof(KString));
   if (str == NULL)
     return NULL;
 
   str->size = 0;
   str->capacity = INITIAL_CAPACITY;
-  str->data = malloc(str->capacity);
+  str->data = CDSA_MALLOC(str->capacity);
 
   if (str->data == NULL) {
-    free(str);
+    CDSA_FREE(str);
     return NULL;
   }
 
@@ -35,8 +36,8 @@ KString *create_kstring(void) {
 void free_kstring(KString *str) {
   if (str == NULL)
     return;
-  free(str->data);
-  free(str);
+  CDSA_FREE(str->data);
+  CDSA_FREE(str);
 }
 
 size_t size_kstring(KString *str) {
@@ -82,7 +83,7 @@ CDSA_STATUS append_kstring(KString *str, const char *text) {
       str->capacity *= 2;
     }
     // Safe memory reallocation with explicit error reporting
-    char *temp = realloc(str->data, str->capacity);
+    char *temp = CDSA_REALLOC(str->data, str->capacity);
     if (temp == NULL) {
       return CDSA_ERR_OOM; // The caller now knows it truncated!
     }

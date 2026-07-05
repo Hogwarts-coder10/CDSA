@@ -1,4 +1,5 @@
 #include "CDSA/vector.h"
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
 #include <stdlib.h>
@@ -14,17 +15,17 @@ struct Vector {
 };
 
 Vector *create_vector(size_t elem_size) {
-  Vector *vec = malloc(sizeof(Vector));
+  Vector *vec = CDSA_MALLOC(sizeof(Vector));
   if (vec == NULL)
     return NULL;
 
   vec->size = 0;
   vec->capacity = INITIAL_CAPACITY;
   vec->elem_size = elem_size;
-  vec->data = malloc(vec->capacity * elem_size);
+  vec->data = CDSA_MALLOC(vec->capacity * elem_size);
 
   if (vec->data == NULL) {
-    free(vec);
+    CDSA_FREE(vec);
     return NULL;
   }
 
@@ -39,7 +40,7 @@ CDSA_STATUS push_vector(Vector *vec, void *elem) {
     vec->capacity *= 2;
     // THE FIX = Use a temporary pointer to prevent memory leaks if realloc
     // fails!
-    void *temp = realloc(vec->data, vec->capacity * vec->elem_size);
+    void *temp = CDSA_REALLOC(vec->data, vec->capacity * vec->elem_size);
     if (temp == NULL)
       return CDSA_ERR_OOM;
     vec->data = temp;
@@ -61,8 +62,8 @@ void *get_vector(Vector *vec, size_t index) {
 void free_vector(Vector *vec) {
   if (vec == NULL)
     return;
-  free(vec->data);
-  free(vec);
+  CDSA_FREE(vec->data);
+  CDSA_FREE(vec);
 }
 
 CDSA_STATUS pop_vector(Vector *vec) {
