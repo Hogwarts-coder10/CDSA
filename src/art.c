@@ -291,7 +291,7 @@ static void free_node(void *node) {
     Node256 *n = (Node256 *)node;
     for (int i = 0; i < 256; i++) {
       if (n->children[i] != NULL) {
-        CDSA_FREE(n->children[i]);
+        free_node(n->children[i]);
       }
     }
     CDSA_FREE(n);
