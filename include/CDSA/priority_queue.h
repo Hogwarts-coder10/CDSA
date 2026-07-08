@@ -14,6 +14,16 @@ PriorityQueue *create_pq(size_t elem_size, PriorityCompareFn cmp_func);
 void free_pq(PriorityQueue *pq);
 
 // --- Operations ---
+/**
+ * @brief Pushes an element into the priority queue and sifts it to the correct
+ * position.
+ * * @ownership
+ * - VALUE: The library creates a shallow, byte-for-byte copy using memcpy
+ * based on the queue's configured elem_size (managed by the underlying Vector).
+ * - MEMORY: If the element is a pointer to dynamically allocated memory,
+ * the caller retains ownership of that underlying memory and must free it
+ * after popping it or before destroying the queue.
+ */
 CDSA_STATUS push_pq(PriorityQueue *pq, void *elem);
 
 // Copies the highest priority element into 'out_elem' and removes it.

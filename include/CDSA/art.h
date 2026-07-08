@@ -25,9 +25,39 @@ ArtTree *create_art();
 void free_art(ArtTree *tree);
 
 // Core Operations
+
+/**
+ * @brief Inserts a key-value pair into the Adaptive Radix Tree.
+ * * @ownership
+ * - KEY: The library takes ownership by creating an internal deep copy
+ * (strdup). The caller can safely free their original key string immediately
+ * after insertion.
+ * - VALUE: The caller retains ownership. The tree only stores the raw void*
+ * pointer.
+ * - MEMORY: The caller is responsible for freeing the memory pointed to by
+ * 'value' before destroying the tree or removing the key, to prevent memory
+ * leaks.
+ */
 CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value);
+
+/**
+ * @brief Searches for a value by its key.
+ * * @ownership
+ * - RETURN: Returns the raw pointer to the value. The caller retains ownership
+ * of this memory and should not free it unless they are actively removing it
+ * from the tree.
+ */
 void *search_art(ArtTree *tree, const char *key);
+
 void print_art(ArtTree *tree);
+
+/**
+ * @brief Removes a key-value pair from the tree.
+ * * @warning Because the tree does not own the value pointers, calling this
+ * function will permanently lose the reference to the value. The caller MUST
+ * retrieve and free the value (using search_art) before calling delete_art if
+ * the value was dynamically allocated.
+ */
 CDSA_STATUS delete_art(ArtTree *tree, const char *key);
 size_t size_art(ArtTree *tree);
 #endif

@@ -12,6 +12,16 @@ Deque *create_deque(size_t capacity, size_t elem_size);
 void free_deque(Deque *dequeue);
 
 // --- Front Operations ---
+/**
+ * @brief Pushes an element into the deque (applies to front and back).
+ * * @ownership
+ * - VALUE: The library creates a shallow, byte-for-byte copy using memcpy
+ * based on the deque's configured elem_size (managed by the underlying
+ * RingBuffer).
+ * - MEMORY: If the element is a pointer to dynamically allocated memory,
+ * the caller retains ownership of that underlying memory and must free it
+ * after popping it or before destroying the deque.
+ */
 CDSA_STATUS push_front_deque(Deque *deque, void *elem);
 CDSA_STATUS pop_front_deque(Deque *deque);
 void *front_deque(Deque *deque);
