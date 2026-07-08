@@ -28,4 +28,34 @@ void print_hashmap(HashMap *map);
 CDSA_STATUS resize_hashmap(HashMap *map);
 size_t size_hashmap(HashMap *map);
 
+// --- Iterator API ---
+
+// Opaque iterator type
+typedef struct HashMapIterator HashMapIterator;
+
+/**
+ * @brief Creates a new iterator for the hashmap.
+ * @warning The caller must free the iterator using free_hashmap_iterator.
+ */
+HashMapIterator *create_hashmap_iterator(HashMap *map);
+
+/**
+ * @brief Checks if there are more valid entries to read.
+ */
+bool has_next_hashmap(HashMapIterator *iter);
+
+/**
+ * @brief Advances the iterator and retrieves the next key-value pair.
+ * @param out_key Pointer to store the retrieved key.
+ * @param out_value Pointer to store the retrieved value (optional, can be
+ * NULL).
+ */
+CDSA_STATUS next_hashmap(HashMapIterator *iter, const char **out_key,
+                         void **out_value);
+
+/**
+ * @brief Frees the iterator memory.
+ */
+void free_hashmap_iterator(HashMapIterator *iter);
+
 #endif

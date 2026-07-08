@@ -105,6 +105,14 @@ target_link_libraries(test_priority_queue
   PRIVATE cdsa
 )
 
+add_executable(test_hashmap_iterator
+  tests/test_hashmap_iterator.c
+)
+target_link_libraries(test_hashmap_iterator
+  PRIVATE cdsa
+)
+
+
 
 target_compile_options(cdsa PRIVATE
     -Wall

@@ -212,3 +212,67 @@ CDSA_STATUS remove_hashmap(HashMap *map, const char *key) {
 
   return CDSA_ERR_NOT_FOUND;
 }
+
+// --- Iterator Implementation ---
+
+struct HashMapIterator {
+  HashMap *map;
+  size_t current_index;
+};
+
+HashMapIterator *create_hashmap_iterator(HashMap *map) {
+  if (map == NULL)
+    return NULL;
+
+  HashMapIterator *iter = CDSA_MALLOC(sizeof(HashMapIterator));
+  if (iter == NULL)
+    return NULL;
+
+  iter->map = map;
+  iter->current_index = 0;
+  return iter;
+}
+
+bool has_next_hashmap(HashMapIterator *iter) {
+  if (iter == NULL || iter->map == NULL)
+    return false;
+
+  // Peek ahead to find the next slot that isn't NULL and isn't a TOMBSTONE
+  while (iter->current_index < iter->map->capacity) {
+    char *key = iter->map->entries[iter->current_index].key;
+    if (key != NULL && key != TOMBSTONE) {
+      return true; // Found valid data!
+    }
+    iter->current_index++;
+  }
+
+  return false; // Reached the end of the capacity
+}
+
+CDSA_STATUS next_hashmap(HashMapIterator *iter, const char **out_key,
+                         void **out_value) {
+  if (iter == NULL || out_key == NULL)
+    return CDSA_ERR_INVALID;
+
+  // has_next automatically advances current_index to the next valid slot
+  if (!has_next_hashmap(iter)) {
+    return CDSA_ERR_NOT_FOUND;
+  }
+
+  // Extract the data
+  *out_key = iter->map->entries[iter->current_index].key;
+  if (out_value != NULL) {
+    *out_value = iter->map->entries[iter->current_index].value;
+  }
+
+  // Advance the index so the next call doesn't read the same element
+  iter->current_index++;
+
+  return CDSA_OK;
+}
+
+void free_hashmap_iterator(HashMapIterator *iter) {
+  if (iter == NULL)
+    return;
+  CDSA_FREE(iter);
+}
