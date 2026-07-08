@@ -281,9 +281,13 @@ static void free_node(void *node) {
 
   else if (header->type == NODE48) {
     Node48 *n = (Node48 *)node;
-    for (uint16_t i = 0; i < n->num_children; i++) {
-      free_node(n->children[i]);
+    for (int i = 0; i < 256; i++) {
+      uint8_t idx = n->child_index[i];
+      if (idx != ART_EMPTY_SLOT) {
+        free_node(n->children[idx]);
+      }
     }
+
     CDSA_FREE(n);
   }
 
