@@ -9,6 +9,7 @@ typedef enum {
   CDSA_ERR_INVALID = -4,   // Invalid argument
   CDSA_ERR_FULL = -5,  // ringbuffer, deque, queue — fixed capacity structures
   CDSA_ERR_EMPTY = -6, // pop/peek on empty structure
+  CDSA_ERR_ITER_INVALIDATED = -7,
 } CDSA_STATUS;
 
 // Optional but highly recommended: A helper to translate codes to strings for

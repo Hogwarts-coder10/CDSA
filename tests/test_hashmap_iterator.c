@@ -57,7 +57,77 @@ void test_hashmap_iterator() {
   printf("=== Iterator Test Complete ===\n\n");
 }
 
+void test_iterator_mutation_guard() {
+  printf("\n=== Testing Iterator Mutation Guard ===\n");
+
+  // 1. Create a map with a deliberately TINY capacity (e.g., 4)
+  // so it's very easy to trigger a resize.
+  HashMap *map = create_hashmap(4);
+
+  // 2. Insert just enough to fill it without resizing
+  int *v1 = CDSA_MALLOC(sizeof(int));
+  *v1 = 1;
+  int *v2 = CDSA_MALLOC(sizeof(int));
+  *v2 = 2;
+  insert_hashmap(map, "Key1", v1);
+  insert_hashmap(map, "Key2", v2);
+
+  // 3. Start iterating
+  HashMapIterator *iter = create_hashmap_iterator(map);
+  const char *key;
+  void *value;
+
+  // Read the first element safely
+  CDSA_STATUS status = next_hashmap(iter, &key, &value);
+  assert(status == CDSA_OK);
+  printf("Read first key safely: %s\n", key);
+
+  // 4. THE LANDMINE: Simulate another thread or subsystem blasting data in
+  printf("Simulating concurrent inserts to force a resize...\n");
+  int *v3 = CDSA_MALLOC(sizeof(int));
+  *v3 = 3;
+  int *v4 = CDSA_MALLOC(sizeof(int));
+  *v4 = 4;
+  int *v5 = CDSA_MALLOC(sizeof(int));
+  *v5 = 5; // This one pushes it over the edge!
+
+  insert_hashmap(map, "Key3", v3);
+  insert_hashmap(map, "Key4", v4);
+  insert_hashmap(map, "Key5", v5);
+
+  // 5. THE TEST: Try to use the old iterator again
+  printf("Attempting to use the old iterator...\n");
+  status = next_hashmap(iter, &key, &value);
+
+  if (status == CDSA_ERR_ITER_INVALIDATED) {
+    printf("[SUCCESS] Iterator correctly detected structural mutation and "
+           "aborted!\n");
+  } else {
+    printf("[FAIL] Iterator did not detect mutation! Status: %d\n", status);
+    assert(false); // Fail the test immediately
+  }
+
+  // Also check has_next_hashmap
+  assert(has_next_hashmap(iter) == false);
+
+  // 6. Cleanup
+  free_hashmap_iterator(iter);
+
+  // We must create a fresh iterator to clean up the memory,
+  // because the old one is permanently locked out!
+  HashMapIterator *cleanup_iter = create_hashmap_iterator(map);
+  while (has_next_hashmap(cleanup_iter)) {
+    next_hashmap(cleanup_iter, &key, &value);
+    CDSA_FREE(value);
+  }
+  free_hashmap_iterator(cleanup_iter);
+  free_hashmap(map);
+
+  printf("=== Mutation Guard Test Complete ===\n\n");
+}
+
 int main() {
   test_hashmap_iterator();
+  test_iterator_mutation_guard();
   return 0;
 }

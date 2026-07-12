@@ -18,6 +18,7 @@ struct HashMap {
   size_t capacity;
   size_t size;
   size_t occupied;
+  size_t version;
   HashEntry *entries;
 };
 
@@ -35,6 +36,7 @@ HashMap *create_hashmap(size_t capacity) {
   map->size = 0;
   map->occupied = 0;
   map->capacity = capacity;
+  map->version = 0;
 
   map->entries = CDSA_CALLOC(capacity, sizeof(HashEntry));
 
@@ -182,7 +184,8 @@ CDSA_STATUS resize_hashmap(HashMap *map) {
 
   map->occupied = map->size; // tombstones are gone after rebuild
 
-  CDSA_FREE(old_entries); // Fixed here
+  CDSA_FREE(old_entries);
+  map->version++; // resizing invalidates all active Iterators
   printf("[System] HashMap resized to capacity: %zu\n", map->capacity);
   return CDSA_OK;
 }
@@ -218,6 +221,7 @@ CDSA_STATUS remove_hashmap(HashMap *map, const char *key) {
 struct HashMapIterator {
   HashMap *map;
   size_t current_index;
+  size_t snapshot_version;
 };
 
 HashMapIterator *create_hashmap_iterator(HashMap *map) {
@@ -230,6 +234,7 @@ HashMapIterator *create_hashmap_iterator(HashMap *map) {
 
   iter->map = map;
   iter->current_index = 0;
+  iter->snapshot_version = map->version;
   return iter;
 }
 
@@ -237,6 +242,12 @@ bool has_next_hashmap(HashMapIterator *iter) {
   if (iter == NULL || iter->map == NULL)
     return false;
 
+  if (iter->map->version != iter->snapshot_version) {
+    return false;
+  }
+
+  // WARNING: This function has side effects! It advances current_index
+  // past empty space or tombstones to find the next valid element.
   // Peek ahead to find the next slot that isn't NULL and isn't a TOMBSTONE
   while (iter->current_index < iter->map->capacity) {
     char *key = iter->map->entries[iter->current_index].key;
@@ -254,6 +265,9 @@ CDSA_STATUS next_hashmap(HashMapIterator *iter, const char **out_key,
   if (iter == NULL || out_key == NULL)
     return CDSA_ERR_INVALID;
 
+  if (iter->map->version != iter->snapshot_version) {
+    return CDSA_ERR_ITER_INVALIDATED;
+  }
   // has_next automatically advances current_index to the next valid slot
   if (!has_next_hashmap(iter)) {
     return CDSA_ERR_NOT_FOUND;

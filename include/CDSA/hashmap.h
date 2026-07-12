@@ -41,14 +41,17 @@ HashMapIterator *create_hashmap_iterator(HashMap *map);
 
 /**
  * @brief Checks if there are more valid entries to read.
+ * @note WARNING: This function modifies the internal state of the iterator
+ * by advancing its index forward over tombstones and empty slots to find data.
+ * @warning Returns false if the underlying map has been structuraly modified
+ * (resized) since the iterator was created.
  */
 bool has_next_hashmap(HashMapIterator *iter);
 
 /**
  * @brief Advances the iterator and retrieves the next key-value pair.
- * @param out_key Pointer to store the retrieved key.
- * @param out_value Pointer to store the retrieved value (optional, can be
- * NULL).
+ * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
+ * mutation (resize) happened during the walk pass.
  */
 CDSA_STATUS next_hashmap(HashMapIterator *iter, const char **out_key,
                          void **out_value);
