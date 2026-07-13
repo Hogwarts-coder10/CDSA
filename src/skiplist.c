@@ -284,3 +284,55 @@ char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
 
   return results;
 }
+
+struct SkipListIterator {
+  SkipList *sl;
+  SkipNode *current;
+};
+
+SkipListIterator *create_skiplist_iterator(SkipList *sl) {
+  if (sl == NULL)
+    return NULL;
+
+  SkipListIterator *iter = CDSA_MALLOC(sizeof(SkipListIterator));
+  if (iter == NULL)
+    return NULL;
+
+  iter->sl = sl;
+  // Level 0 of the header points to the first actual node in the list
+  iter->current = sl->header->forward[0];
+
+  return iter;
+}
+
+bool has_next_skiplist(SkipListIterator *iter) {
+  if (iter == NULL)
+    return false;
+  return iter->current != NULL;
+}
+
+CDSA_STATUS next_skiplist(SkipListIterator *iter, double *out_score,
+                          const char **out_value) {
+  if (iter == NULL || iter->current == NULL) {
+    return CDSA_ERR_NOT_FOUND;
+  }
+
+  // Extract the data safely
+  if (out_score != NULL) {
+    *out_score = iter->current->score;
+  }
+  if (out_value != NULL) {
+    *out_value = iter->current->value;
+  }
+
+  // Advance the iterator along the Level 0 base list
+  iter->current = iter->current->forward[0];
+
+  return CDSA_OK;
+}
+
+void free_skiplist_iterator(SkipListIterator *iter) {
+  if (iter == NULL)
+    return;
+  CDSA_FREE(iter);
+}

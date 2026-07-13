@@ -37,4 +37,33 @@ CDSA_STATUS remove_skiplist(SkipList *sl, double score, const char *value);
 char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
                           int *out_score);
 
+// -- Iterartor API --
+// Opaque Iterartor type
+typedef struct SkipListIterator SkipListIterator;
+
+/**
+ * @brief creates a new Iterartor for SkipList
+ * @warning the caller must free the Iterartor using free_skiplist_iterator
+ */
+
+SkipListIterator *create_skiplist_iterator(SkipList *sl);
+
+/**
+ * @brief Checks if there are more nodes to read.
+ */
+bool has_next_skiplist(SkipListIterator *iter);
+
+/**
+ * @brief Advances the iterator and retrieves the next score and value.
+ * @param out_score Pointer to store the score (optional, can be NULL).
+ * @param out_value Pointer to store the value string (optional, can be NULL).
+ */
+CDSA_STATUS next_skiplist(SkipListIterator *iter, double *out_score,
+                          const char **out_value);
+
+/**
+ * @brief Frees the iterator memory.
+ */
+void free_skiplist_iterator(SkipListIterator *iter);
+
 #endif

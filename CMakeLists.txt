@@ -113,6 +113,14 @@ target_link_libraries(test_hashmap_iterator
 )
 
 
+add_executable(test_skiplist_iterator
+  tests/test_skiplist_iterator.c
+)
+target_link_libraries(test_skiplist_iterator
+  PRIVATE cdsa
+)
+
+
 
 target_compile_options(cdsa PRIVATE
     -Wall
