@@ -12,6 +12,7 @@ struct Vector {
   size_t size;
   size_t capacity;
   size_t elem_size;
+  size_t version;
 };
 
 Vector *create_vector(size_t elem_size) {
@@ -22,6 +23,7 @@ Vector *create_vector(size_t elem_size) {
   vec->size = 0;
   vec->capacity = INITIAL_CAPACITY;
   vec->elem_size = elem_size;
+  vec->version = 0;
   vec->data = CDSA_MALLOC(vec->capacity * elem_size);
 
   if (vec->data == NULL) {
@@ -49,7 +51,7 @@ CDSA_STATUS push_vector(Vector *vec, void *elem) {
   void *target = (char *)vec->data + (vec->size * vec->elem_size);
   memcpy(target, elem, vec->elem_size);
   vec->size++;
-
+  vec->version++;
   return CDSA_OK;
 }
 
@@ -76,6 +78,7 @@ CDSA_STATUS pop_vector(Vector *vec) {
   }
 
   vec->size--;
+  vec->version++;
   return CDSA_OK;
 }
 
@@ -127,4 +130,69 @@ bool is_empty_vector(Vector *vec) {
   if (vec == NULL)
     return true;
   return vec->size == 0;
+}
+
+// --- Iterator Implementation ---
+
+struct VectorIterator {
+  Vector *vec;
+  size_t current_index;
+  size_t snapshot_version;
+};
+
+VectorIterator *create_vector_iterator(Vector *vec) {
+  if (vec == NULL)
+    return NULL;
+
+  VectorIterator *iter = CDSA_MALLOC(sizeof(VectorIterator));
+  if (iter == NULL)
+    return NULL;
+
+  iter->vec = vec;
+  iter->current_index = 0;
+  iter->snapshot_version = vec->version; // Capture the safety snapshot
+
+  return iter;
+}
+
+bool has_next_vector(VectorIterator *iter) {
+  if (iter == NULL || iter->vec == NULL)
+    return false;
+
+  // Guard Check: Has the vector morphed since we started?
+  if (iter->vec->version != iter->snapshot_version) {
+    return false;
+  }
+
+  return iter->current_index < iter->vec->size;
+}
+
+CDSA_STATUS next_vector(VectorIterator *iter, void **out_value) {
+  if (iter == NULL || out_value == NULL)
+    return CDSA_ERR_INVALID;
+
+  // Guard Check: Fail-fast if structural mutation occurred
+  if (iter->vec->version != iter->snapshot_version) {
+    return CDSA_ERR_ITER_INVALIDATED;
+  }
+
+  if (!has_next_vector(iter)) {
+    return CDSA_ERR_NOT_FOUND;
+  }
+
+  // Yield the pointer directly into the array at the current index
+  // Note: Adjust the pointer arithmetic based on your internal get_vector
+  // implementation
+  char *byte_array = (char *)iter->vec->data;
+  *out_value =
+      (void *)(byte_array + (iter->current_index * iter->vec->elem_size));
+
+  iter->current_index++;
+  return CDSA_OK;
+}
+
+void free_vector_iterator(VectorIterator *iter) {
+  if (iter == NULL)
+    return;
+  CDSA_FREE(iter);
 }

@@ -121,6 +121,13 @@ target_link_libraries(test_skiplist_iterator
 )
 
 
+add_executable(test_vector_iterator
+  tests/test_vector_iterator.c
+)
+target_link_libraries(test_vector_iterator
+  PRIVATE cdsa
+)
+
 
 target_compile_options(cdsa PRIVATE
     -Wall
