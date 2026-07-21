@@ -97,3 +97,23 @@ bool is_full_deque(Deque *deque) {
     return false;
   return is_full_ringbuffer(deque->rb);
 }
+
+// --- Iterator Implementation ---
+
+DequeIterator *create_deque_iterator(Deque *d) {
+  if (d == NULL)
+    return NULL;
+  return (DequeIterator *)create_ringbuffer_iterator(d->rb);
+}
+
+bool has_next_deque(DequeIterator *iter) {
+  return has_next_ringbuffer((RingBufferIterator *)iter);
+}
+
+CDSA_STATUS next_deque(DequeIterator *iter, void **out_value) {
+  return next_ringbuffer((RingBufferIterator *)iter, out_value);
+}
+
+void free_deque_iterator(DequeIterator *iter) {
+  free_ringbuffer_iterator((RingBufferIterator *)iter);
+}

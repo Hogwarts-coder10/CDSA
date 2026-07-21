@@ -27,4 +27,13 @@ size_t size_queue(Queue *queue);
 bool is_empty_queue(Queue *queue);
 bool is_full_queue(Queue *queue);
 
+// --- Iterator API ---
+
+typedef struct QueueIterator QueueIterator;
+
+QueueIterator *create_queue_iterator(Queue *q);
+bool has_next_queue(QueueIterator *iter);
+CDSA_STATUS next_queue(QueueIterator *iter, void **out_value);
+void free_queue_iterator(QueueIterator *iter);
+
 #endif

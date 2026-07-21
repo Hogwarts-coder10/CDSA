@@ -17,6 +17,7 @@ struct LinkedList {
   Node *head;
   size_t size;
   size_t elem_size;
+  size_t version;
 };
 
 LinkedList *create_linkedlist(size_t elem_size) {
@@ -26,6 +27,7 @@ LinkedList *create_linkedlist(size_t elem_size) {
   list->head = NULL;
   list->size = 0;
   list->elem_size = elem_size;
+  list->version = 0;
   return list;
 }
 
@@ -75,6 +77,7 @@ CDSA_STATUS push_front_linkedlist(LinkedList *list, void *value) {
   new_node->next = list->head;
   list->head = new_node;
   list->size++;
+  list->version++;
 
   return CDSA_OK;
 }
@@ -92,7 +95,7 @@ CDSA_STATUS pop_front_linkedlist(LinkedList *list) {
   CDSA_FREE(old_head->data);
   CDSA_FREE(old_head);
   list->size--;
-
+  list->version++;
   return CDSA_OK;
 }
 
@@ -111,6 +114,7 @@ void clear_linkedlist(LinkedList *list) {
   }
   list->head = NULL;
   list->size = 0;
+  list->version++;
 }
 
 void *front_linkedlist(LinkedList *list) {
@@ -130,4 +134,67 @@ void print_linkedlist(LinkedList *list, void (*print_fn)(void *)) {
     current = current->next;
   }
   printf("NULL\n");
+}
+
+// --- Iterator Implementation ---
+
+struct LinkedListIterator {
+  LinkedList *list;
+  Node *current_node;      // Tracks exactly where we are in the chain
+  size_t snapshot_version; // Safety lock against mid-walk modifications
+};
+
+LinkedListIterator *create_linkedlist_iterator(LinkedList *list) {
+  if (list == NULL)
+    return NULL;
+
+  LinkedListIterator *iter = CDSA_MALLOC(sizeof(LinkedListIterator));
+  if (iter == NULL)
+    return NULL;
+
+  iter->list = list;
+  iter->current_node = list->head; // Start right at the front
+  iter->snapshot_version = list->version;
+
+  return iter;
+}
+
+bool has_next_linkedlist(LinkedListIterator *iter) {
+  if (iter == NULL || iter->list == NULL)
+    return false;
+
+  // Guard Check
+  if (iter->list->version != iter->snapshot_version) {
+    return false;
+  }
+
+  return iter->current_node != NULL;
+}
+
+CDSA_STATUS next_linkedlist(LinkedListIterator *iter, void **out_value) {
+  if (iter == NULL || out_value == NULL)
+    return CDSA_ERR_INVALID;
+
+  // Guard Check: Fail fast if the list was pushed/popped/cleared
+  if (iter->list->version != iter->snapshot_version) {
+    return CDSA_ERR_ITER_INVALIDATED;
+  }
+
+  if (!has_next_linkedlist(iter)) {
+    return CDSA_ERR_NOT_FOUND;
+  }
+
+  // Yield the pointer to the payload inside the node
+  *out_value = iter->current_node->data;
+
+  // Chase the pointer to the next node in the chain
+  iter->current_node = iter->current_node->next;
+
+  return CDSA_OK;
+}
+
+void free_linkedlist_iterator(LinkedListIterator *iter) {
+  if (iter == NULL)
+    return;
+  CDSA_FREE(iter);
 }

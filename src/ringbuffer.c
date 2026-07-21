@@ -2,6 +2,7 @@
 #include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,6 +13,7 @@ struct RingBuffer {
   size_t size;
   size_t capacity;
   size_t elem_size;
+  size_t version;
 };
 
 // --- Core Lifecycle ---
@@ -27,6 +29,7 @@ RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
   rb->size = 0;
   rb->head = 0;
   rb->tail = 0;
+  rb->version = 0;
 
   // Allocate the continuous block of memory
   rb->data = CDSA_MALLOC(capacity * elem_size);
@@ -83,7 +86,7 @@ CDSA_STATUS push_back_ringbuffer(RingBuffer *rb, void *elem) {
   // THE MAGIC: Move tail forward, wrap around to 0 if it hits capacity
   rb->tail = (rb->tail + 1) % rb->capacity;
   rb->size++;
-
+  rb->version++;
   return CDSA_OK;
 }
 
@@ -100,6 +103,7 @@ CDSA_STATUS pop_front_ringbuffer(RingBuffer *rb) {
   // We just move the head pointer forward and wrap it around!
   rb->head = (rb->head + 1) % rb->capacity;
   rb->size--;
+  rb->version++;
 
   return CDSA_OK;
 }
@@ -130,6 +134,7 @@ CDSA_STATUS push_front_ringbuffer(RingBuffer *rb, void *elem) {
   memcpy(target, elem, rb->elem_size);
 
   rb->size++;
+  rb->version++;
   return CDSA_OK;
 }
 
@@ -145,6 +150,7 @@ CDSA_STATUS pop_back_ringbuffer(RingBuffer *rb) {
   // REVERSE MAGIC: Move tail backwards, wrapping around
   rb->tail = (rb->tail + rb->capacity - 1) % rb->capacity;
   rb->size--;
+  rb->version++;
 
   return CDSA_OK;
 }
@@ -157,4 +163,70 @@ void *back_ringbuffer(RingBuffer *rb) {
   // The "back" element is always one step behind the current tail
   size_t last_idx = (rb->tail + rb->capacity - 1) % rb->capacity;
   return (char *)rb->data + (last_idx * rb->elem_size);
+}
+
+// --- Iterator Implementation ---
+
+struct RingBufferIterator {
+  RingBuffer *rb;
+  size_t progress;         // Tracks logical steps: from 0 to rb->size - 1
+  size_t snapshot_version; // Safety lock against mid-walk modifications
+};
+
+RingBufferIterator *create_ringbuffer_iterator(RingBuffer *rb) {
+  if (rb == NULL)
+    return NULL;
+
+  RingBufferIterator *iter = CDSA_MALLOC(sizeof(RingBufferIterator));
+  if (iter == NULL)
+    return NULL;
+
+  iter->rb = rb;
+  iter->progress = 0;
+  iter->snapshot_version = rb->version;
+
+  return iter;
+}
+
+bool has_next_ringbuffer(RingBufferIterator *iter) {
+  if (iter == NULL || iter->rb == NULL)
+    return false;
+
+  // Guard Check
+  if (iter->rb->version != iter->snapshot_version) {
+    return false;
+  }
+
+  return iter->progress < iter->rb->size;
+}
+
+CDSA_STATUS next_ringbuffer(RingBufferIterator *iter, void **out_value) {
+  if (iter == NULL || out_value == NULL)
+    return CDSA_ERR_INVALID;
+
+  // Guard Check
+  if (iter->rb->version != iter->snapshot_version) {
+    return CDSA_ERR_ITER_INVALIDATED;
+  }
+
+  if (!has_next_ringbuffer(iter)) {
+    return CDSA_ERR_NOT_FOUND;
+  }
+
+  // Calculate the circular array index based on current progress
+  size_t physical_index =
+      (iter->rb->head + iter->progress) % iter->rb->capacity;
+
+  // Point directly to the element at that index
+  char *byte_array = (char *)iter->rb->data;
+  *out_value = (void *)(byte_array + (physical_index * iter->rb->elem_size));
+
+  iter->progress++;
+  return CDSA_OK;
+}
+
+void free_ringbuffer_iterator(RingBufferIterator *iter) {
+  if (iter == NULL)
+    return;
+  CDSA_FREE(iter);
 }

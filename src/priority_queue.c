@@ -186,3 +186,25 @@ void clear_pq(PriorityQueue *pq) {
     return;
   clear_vector(pq->data);
 }
+
+// --- Iterator Implementation ---
+
+PriorityQueueIterator *create_priority_queue_iterator(PriorityQueue *pq) {
+  if (pq == NULL)
+    return NULL;
+
+  // Route directly to the underlying Vector iterator
+  return (PriorityQueueIterator *)create_vector_iterator(pq->data);
+}
+
+bool has_next_priority_queue(PriorityQueueIterator *iter) {
+  return has_next_vector((VectorIterator *)iter);
+}
+
+CDSA_STATUS next_priority_queue(PriorityQueueIterator *iter, void **out_value) {
+  return next_vector((VectorIterator *)iter, out_value);
+}
+
+void free_priority_queue_iterator(PriorityQueueIterator *iter) {
+  free_vector_iterator((VectorIterator *)iter);
+}

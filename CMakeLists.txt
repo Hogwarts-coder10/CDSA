@@ -129,6 +129,32 @@ target_link_libraries(test_vector_iterator
 )
 
 
+add_executable(test_ringbuffer_iterator
+  tests/test_ringbuffer_iterator.c
+)
+target_link_libraries(test_ringbuffer_iterator
+  PRIVATE cdsa
+)
+
+
+add_executable(test_linkedlist_iterator
+  tests/test_linkedlist_iterator.c
+)
+target_link_libraries(test_linkedlist_iterator
+  PRIVATE cdsa
+)
+
+
+add_executable(test_wrappers_iterators
+  tests/test_wrappers_iterators.c
+)
+target_link_libraries(test_wrappers_iterators
+  PRIVATE cdsa
+)
+
+
+
+
 target_compile_options(cdsa PRIVATE
     -Wall
     -Wextra

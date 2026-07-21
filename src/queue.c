@@ -74,3 +74,26 @@ bool is_full_queue(Queue *queue) {
     return false;
   return is_full_ringbuffer(queue->rb);
 }
+
+// --- Iterator Implementation ---
+
+// --- Iterator Implementation ---
+
+QueueIterator *create_queue_iterator(Queue *q) {
+  if (q == NULL)
+    return NULL;
+  // Route directly to the underlying RingBuffer
+  return (QueueIterator *)create_ringbuffer_iterator(q->rb);
+}
+
+bool has_next_queue(QueueIterator *iter) {
+  return has_next_ringbuffer((RingBufferIterator *)iter);
+}
+
+CDSA_STATUS next_queue(QueueIterator *iter, void **out_value) {
+  return next_ringbuffer((RingBufferIterator *)iter, out_value);
+}
+
+void free_queue_iterator(QueueIterator *iter) {
+  free_ringbuffer_iterator((RingBufferIterator *)iter);
+}

@@ -26,4 +26,36 @@ CDSA_STATUS pop_front_linkedlist(LinkedList *list);
 void clear_linkedlist(LinkedList *list);
 void print_linkedlist(LinkedList *list, void (*print_fn)(void *));
 
+// --- Iterator API ---
+
+typedef struct LinkedListIterator LinkedListIterator;
+
+/**
+ * @brief Creates a new iterator for the LinkedList.
+ * @warning The caller must free the iterator using free_linkedlist_iterator.
+ */
+LinkedListIterator *create_linkedlist_iterator(LinkedList *list);
+
+/**
+ * @brief Checks if there are more nodes to read.
+ */
+bool has_next_linkedlist(LinkedListIterator *iter);
+
+/**
+ * @brief Advances the iterator and retrieves a pointer to the next element.
+ * * @ownership
+ * - YIELD: Returns a temporary pointer directly to the data payload of the
+ * current node.
+ * - WARNING: Do NOT free this pointer. It is invalidated if the list is
+ * modified.
+ * * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
+ * mutation occurred.
+ */
+CDSA_STATUS next_linkedlist(LinkedListIterator *iter, void **out_value);
+
+/**
+ * @brief Frees the iterator memory.
+ */
+void free_linkedlist_iterator(LinkedListIterator *iter);
+
 #endif

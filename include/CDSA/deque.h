@@ -36,4 +36,13 @@ size_t size_deque(Deque *deque);
 bool is_empty_deque(Deque *deque);
 bool is_full_deque(Deque *deque);
 
+// --- Iterator API ---
+
+typedef struct DequeIterator DequeIterator;
+
+DequeIterator *create_deque_iterator(Deque *d);
+bool has_next_deque(DequeIterator *iter);
+CDSA_STATUS next_deque(DequeIterator *iter, void **out_value);
+void free_deque_iterator(DequeIterator *iter);
+
 #endif

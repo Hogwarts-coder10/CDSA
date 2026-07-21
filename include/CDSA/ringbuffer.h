@@ -34,4 +34,36 @@ size_t size_ringbuffer(RingBuffer *rb);
 bool is_empty_ringbuffer(RingBuffer *rb);
 bool is_full_ringbuffer(RingBuffer *rb);
 
+// --- Iterator API ---
+
+typedef struct RingBufferIterator RingBufferIterator;
+
+/**
+ * @brief Creates a new iterator for the RingBuffer.
+ * @warning The caller must free the iterator using free_ringbuffer_iterator.
+ */
+RingBufferIterator *create_ringbuffer_iterator(RingBuffer *rb);
+
+/**
+ * @brief Checks if there are more elements to read.
+ */
+bool has_next_ringbuffer(RingBufferIterator *iter);
+
+/**
+ * @brief Advances the iterator and retrieves a pointer to the next element.
+ * * @ownership
+ * - YIELD: Returns a temporary pointer directly to the slot inside the internal
+ * circular array.
+ * - WARNING: Do NOT free this pointer. It is invalidated if the ringbuffer is
+ * modified.
+ * * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
+ * mutation occurred.
+ */
+CDSA_STATUS next_ringbuffer(RingBufferIterator *iter, void **out_value);
+
+/**
+ * @brief Frees the iterator memory.
+ */
+void free_ringbuffer_iterator(RingBufferIterator *iter);
+
 #endif

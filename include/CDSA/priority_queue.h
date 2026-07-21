@@ -37,4 +37,24 @@ size_t size_pq(PriorityQueue *pq);
 bool is_empty_pq(PriorityQueue *pq);
 void clear_pq(PriorityQueue *pq);
 
+// --- Iterator API ---
+
+// Typedef directly to the VectorIterator
+typedef struct VectorIterator PriorityQueueIterator;
+
+/**
+ * @brief Creates a new iterator for the Priority Queue.
+ * @warning The caller must free the iterator using
+ * free_priority_queue_iterator.
+ * @note Elements are yielded in heap-array order (level-order), NOT strictly
+ * sorted order.
+ */
+PriorityQueueIterator *create_priority_queue_iterator(PriorityQueue *pq);
+
+bool has_next_priority_queue(PriorityQueueIterator *iter);
+
+CDSA_STATUS next_priority_queue(PriorityQueueIterator *iter, void **out_value);
+
+void free_priority_queue_iterator(PriorityQueueIterator *iter);
+
 #endif
