@@ -60,4 +60,35 @@ void print_art(ArtTree *tree);
  */
 CDSA_STATUS delete_art(ArtTree *tree, const char *key);
 size_t size_art(ArtTree *tree);
+
+// --- Iterator API ---
+
+typedef struct ArtIterator ArtIterator;
+
+/**
+ * @brief Creates a new iterator for the Adaptive Radix Tree.
+ * @warning The caller must free the iterator using free_art_iterator.
+ */
+ArtIterator *create_art_iterator(ArtTree *tree);
+
+/**
+ * @brief Checks if there are more key-value pairs to read.
+ */
+bool has_next_art(ArtIterator *iter);
+
+/**
+ * @brief Advances the iterator and retrieves a pointer to the next value.
+ * * @ownership
+ * - YIELD: Returns a temporary pointer to the value inside the leaf.
+ * - WARNING: Do NOT free this pointer. It is invalidated if the tree is
+ * modified.
+ * * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
+ * mutation occurred.
+ */
+CDSA_STATUS next_art(ArtIterator *iter, void **out_value);
+
+/**
+ * @brief Frees the iterator memory.
+ */
+void free_art_iterator(ArtIterator *iter);
 #endif

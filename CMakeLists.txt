@@ -153,7 +153,13 @@ target_link_libraries(test_wrappers_iterators
 )
 
 
+add_executable(test_art_iterator
+  tests/test_art_iterator.c
+)
 
+target_link_libraries(test_art_iterator
+  PRIVATE cdsa
+)
 
 target_compile_options(cdsa PRIVATE
     -Wall
