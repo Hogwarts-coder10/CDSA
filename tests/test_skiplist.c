@@ -1,3 +1,4 @@
+#include "CDSA/error.h"
 #define _POSIX_C_SOURCE 200809L
 #include "CDSA/skiplist.h"
 #include <assert.h>
@@ -36,13 +37,13 @@ static void test_basic_insert_and_size() {
   printf("[*] test_basic_insert_and_size\n");
   SkipList *sl = cdsa_create_skiplist();
 
-  assert(insert_skiplist(sl, 1.0, "alpha") == true);
+  assert(insert_skiplist(sl, 1.0, "alpha") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 1);
 
-  assert(insert_skiplist(sl, 2.0, "beta") == true);
+  assert(insert_skiplist(sl, 2.0, "beta") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 2);
 
-  assert(insert_skiplist(sl, 3.0, "gamma") == true);
+  assert(insert_skiplist(sl, 3.0, "gamma") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 3);
 
   cdsa_free_skiplist(sl);
@@ -57,7 +58,7 @@ static void test_delete_existing() {
   insert_skiplist(sl, 20.0, "bob");
   insert_skiplist(sl, 30.0, "charlie");
 
-  assert(remove_skiplist(sl, 20.0, "bob") == true);
+  assert(remove_skiplist(sl, 20.0, "bob") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 2);
 
   // bob should no longer appear in a full range
@@ -78,8 +79,8 @@ static void test_delete_nonexistent() {
   SkipList *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 5.0, "x");
-  assert(remove_skiplist(sl, 9999.0, "ghost") == false);
-  assert(remove_skiplist(sl, 5.0, "wrong_value") == false);
+  assert(remove_skiplist(sl, 9999.0, "ghost") != CDSA_OK);
+  assert(remove_skiplist(sl, 5.0, "wrong_value") != CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 1); // nothing was actually removed
 
   cdsa_free_skiplist(sl);
@@ -91,11 +92,11 @@ static void test_delete_then_reinsert() {
   SkipList *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 1.0, "ping");
-  assert(remove_skiplist(sl, 1.0, "ping") == true);
+  assert(remove_skiplist(sl, 1.0, "ping") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 0);
 
   // reinsert same key — should work fine
-  assert(insert_skiplist(sl, 1.0, "ping") == true);
+  assert(insert_skiplist(sl, 1.0, "ping") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 1);
 
   int count = 0;
@@ -244,9 +245,9 @@ static void test_insert_delete_churn() {
 
   // Repeated insert/delete of the same key — verifies no leak or corruption
   for (int i = 0; i < 500; i++) {
-    assert(insert_skiplist(sl, 1.0, "churn") == true);
+    assert(insert_skiplist(sl, 1.0, "churn") == CDSA_OK);
     assert(cdsa_size_skiplist(sl) == 1);
-    assert(remove_skiplist(sl, 1.0, "churn") == true);
+    assert(remove_skiplist(sl, 1.0, "churn") == CDSA_OK);
     assert(cdsa_size_skiplist(sl) == 0);
   }
 
@@ -274,7 +275,7 @@ static void test_range_caller_owns_strings() {
   r[0][0] = 'X';
 
   // The node inside the skiplist still has "original" so deletion still works
-  assert(remove_skiplist(sl, 1.0, "original") == true);
+  assert(remove_skiplist(sl, 1.0, "original") == CDSA_OK);
 
   cdsa_free_range(r, count);
   cdsa_free_skiplist(sl);
@@ -298,7 +299,7 @@ static void test_kedis_style_namespaced_keys() {
   assert(range_contains(r, count, "session:user:12345:refresh_token") == 1);
   cdsa_free_range(r, count);
 
-  assert(remove_skiplist(sl, 1.0, "session:user:12345:auth_token") == true);
+  assert(remove_skiplist(sl, 1.0, "session:user:12345:auth_token") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 2);
 
   cdsa_free_skiplist(sl);
