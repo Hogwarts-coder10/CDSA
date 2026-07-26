@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct LinkedList LinkedList;
+typedef struct cdsa_linkedlist cdsa_linkedlist;
 
-LinkedList *create_linkedlist(size_t elem_size);
-void free_linkedlist(LinkedList *list);
+cdsa_linkedlist *cdsa_create_linkedlist(cdsa_size_t elem_size);
+void cdsa_free_linkedlist(cdsa_linkedlist *list);
 /**
  * @brief Pushes an element onto the front of the linked list.
  * * @ownership
@@ -18,28 +18,28 @@ void free_linkedlist(LinkedList *list);
  * dynamically allocated memory, the caller retains ownership of that underlying
  * memory and must free it before destroying the list.
  */
-CDSA_STATUS push_front_linkedlist(LinkedList *list, void *value);
-size_t size_linkedlist(LinkedList *list);
-bool is_empty_linkedlist(LinkedList *list);
-void *front_linkedlist(LinkedList *list);
-CDSA_STATUS pop_front_linkedlist(LinkedList *list);
-void clear_linkedlist(LinkedList *list);
-void print_linkedlist(LinkedList *list, void (*print_fn)(void *));
+CDSA_STATUS cdsa_push_front_linkedlist(cdsa_linkedlist *list, void *value);
+cdsa_size_t cdsa_size_linkedlist(cdsa_linkedlist *list);
+bool cdsa_is_empty_linkedlist(cdsa_linkedlist *list);
+void *cdsa_front_linkedlist(cdsa_linkedlist *list);
+CDSA_STATUS cdsa_pop_front_linkedlist(cdsa_linkedlist *list);
+void cdsa_clear_linkedlist(cdsa_linkedlist *list);
+void print_linkedlist(cdsa_linkedlist *list, void (*print_fn)(void *));
 
 // --- Iterator API ---
 
-typedef struct LinkedListIterator LinkedListIterator;
+typedef struct cdsa_linkedlist_iterator cdsa_linkedlist_iterator;
 
 /**
- * @brief Creates a new iterator for the LinkedList.
- * @warning The caller must free the iterator using free_linkedlist_iterator.
+ * @brief Creates a new iterator for the cdsa_linkedlist.
+ * @warning The caller must free the iterator using cdsa_free_linkedlist_iterator.
  */
-LinkedListIterator *create_linkedlist_iterator(LinkedList *list);
+cdsa_linkedlist_iterator *cdsa_create_linkedlist_iterator(cdsa_linkedlist *list);
 
 /**
  * @brief Checks if there are more nodes to read.
  */
-bool has_next_linkedlist(LinkedListIterator *iter);
+bool cdsa_has_next_linkedlist(cdsa_linkedlist_iterator *iter);
 
 /**
  * @brief Advances the iterator and retrieves a pointer to the next element.
@@ -51,11 +51,11 @@ bool has_next_linkedlist(LinkedListIterator *iter);
  * * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
  * mutation occurred.
  */
-CDSA_STATUS next_linkedlist(LinkedListIterator *iter, void **out_value);
+CDSA_STATUS cdsa_next_linkedlist(cdsa_linkedlist_iterator *iter, void **out_value);
 
 /**
  * @brief Frees the iterator memory.
  */
-void free_linkedlist_iterator(LinkedListIterator *iter);
+void cdsa_free_linkedlist_iterator(cdsa_linkedlist_iterator *iter);
 
 #endif

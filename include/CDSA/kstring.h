@@ -7,9 +7,9 @@
 
 typedef struct KString KString;
 
-KString *create_kstring(void);
-void free_kstring(KString *str);
-size_t size_kstring(KString *str);
+KString *cdsa_create_kstring(void);
+void cdsa_free_kstring(KString *str);
+cdsa_size_t cdsa_size_kstring(KString *str);
 const char *c_str_kstring(KString *str);
 
 /**
@@ -22,8 +22,8 @@ const char *c_str_kstring(KString *str);
  */
 CDSA_STATUS append_kstring(KString *str, const char *text);
 
-void clear_kstring(KString *str);
-size_t capacity_kstring(KString *str);
-bool is_empty_kstring(KString *str);
+void cdsa_clear_kstring(KString *str);
+cdsa_size_t capacity_kstring(KString *str);
+bool cdsa_is_empty_kstring(KString *str);
 
 #endif

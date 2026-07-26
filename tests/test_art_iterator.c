@@ -8,7 +8,7 @@ void test_art_iterator() {
   printf("\n=== Testing ART Iterator ===\n");
 
   // 1. Create the tree
-  ArtTree *tree = create_art();
+  cdsa_art_tree *tree = cdsa_create_art();
   assert(tree != NULL);
 
   // 2. Populate it with string keys and integer values
@@ -16,19 +16,19 @@ void test_art_iterator() {
   int vals[] = {10, 20, 30, 40};
 
   for (int i = 0; i < 4; i++) {
-    assert(insert_art(tree, keys[i], &vals[i]) == CDSA_OK);
+    assert(cdsa_insert_art(tree, keys[i], &vals[i]) == CDSA_OK);
   }
 
   // 3. Iterate over the tree
-  ArtIterator *iter = create_art_iterator(tree);
+  cdsa_art_iterator *iter = cdsa_create_art_iterator(tree);
   assert(iter != NULL);
 
   void *value_ptr;
   int count = 0;
 
   printf("Iterating ART contents (DFS traversal):\n");
-  while (has_next_art(iter)) {
-    CDSA_STATUS status = next_art(iter, &value_ptr);
+  while (cdsa_has_next_art(iter)) {
+    CDSA_STATUS status = cdsa_next_art(iter, &value_ptr);
     assert(status == CDSA_OK);
 
     int val = *(int *)value_ptr;
@@ -43,16 +43,16 @@ void test_art_iterator() {
   // 4. Test Mutation Guard
   printf("Simulating insertion mid-iteration to trigger mutation guard...\n");
   int extra_val = 99;
-  insert_art(tree, "elderberry", &extra_val); // This must bump tree->version!
+  cdsa_insert_art(tree, "elderberry", &extra_val); // This must bump tree->version!
 
   // The iterator must now fail-fast
-  assert(has_next_art(iter) == false);
-  assert(next_art(iter, &value_ptr) == CDSA_ERR_ITER_INVALIDATED);
+  assert(cdsa_has_next_art(iter) == false);
+  assert(cdsa_next_art(iter, &value_ptr) == CDSA_ERR_ITER_INVALIDATED);
   printf("Mutation guard successfully caught structural modification.\n");
 
   // Cleanup
-  free_art_iterator(iter);
-  free_art(tree);
+  cdsa_free_art_iterator(iter);
+  cdsa_free_art(tree);
 
   printf("=== ART Iterator Test Complete ===\n\n");
 }

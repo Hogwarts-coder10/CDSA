@@ -5,12 +5,12 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct RingBuffer RingBuffer;
+typedef struct cdsa_ringbuffer cdsa_ringbuffer;
 
-RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size);
-void free_ringbuffer(RingBuffer *rb);
+cdsa_ringbuffer *cdsa_create_ringbuffer(cdsa_size_t capacity, cdsa_size_t elem_size);
+void cdsa_free_ringbuffer(cdsa_ringbuffer *rb);
 
-// --- Queue Operations (FIFO) ---
+// --- cdsa_queue Operations (FIFO) ---
 /**
  * @brief Pushes an element into the collection.
  *
@@ -20,34 +20,34 @@ void free_ringbuffer(RingBuffer *rb);
  * - MEMORY: If the element is a pointer to dynamically allocated memory,
  *   the caller retains ownership of that underlying memory and must free it.
  */
-CDSA_STATUS push_back_ringbuffer(RingBuffer *rb, void *elem);
-CDSA_STATUS pop_front_ringbuffer(RingBuffer *rb);
-void *front_ringbuffer(RingBuffer *rb);
+CDSA_STATUS cdsa_push_back_ringbuffer(cdsa_ringbuffer *rb, void *elem);
+CDSA_STATUS cdsa_pop_front_ringbuffer(cdsa_ringbuffer *rb);
+void *cdsa_front_ringbuffer(cdsa_ringbuffer *rb);
 
-// --- Deque Operations (Double-Ended) ---
-CDSA_STATUS push_front_ringbuffer(RingBuffer *rb, void *elem);
-CDSA_STATUS pop_back_ringbuffer(RingBuffer *rb);
-void *back_ringbuffer(RingBuffer *rb);
+// --- cdsa_deque Operations (Double-Ended) ---
+CDSA_STATUS cdsa_push_front_ringbuffer(cdsa_ringbuffer *rb, void *elem);
+CDSA_STATUS cdsa_pop_back_ringbuffer(cdsa_ringbuffer *rb);
+void *cdsa_back_ringbuffer(cdsa_ringbuffer *rb);
 
 // --- Utilities ---
-size_t size_ringbuffer(RingBuffer *rb);
-bool is_empty_ringbuffer(RingBuffer *rb);
-bool is_full_ringbuffer(RingBuffer *rb);
+cdsa_size_t cdsa_size_ringbuffer(cdsa_ringbuffer *rb);
+bool cdsa_is_empty_ringbuffer(cdsa_ringbuffer *rb);
+bool cdsa_is_full_ringbuffer(cdsa_ringbuffer *rb);
 
 // --- Iterator API ---
 
-typedef struct RingBufferIterator RingBufferIterator;
+typedef struct cdsa_ringbuffer_iterator cdsa_ringbuffer_iterator;
 
 /**
- * @brief Creates a new iterator for the RingBuffer.
- * @warning The caller must free the iterator using free_ringbuffer_iterator.
+ * @brief Creates a new iterator for the cdsa_ringbuffer.
+ * @warning The caller must free the iterator using cdsa_free_ringbuffer_iterator.
  */
-RingBufferIterator *create_ringbuffer_iterator(RingBuffer *rb);
+cdsa_ringbuffer_iterator *cdsa_create_ringbuffer_iterator(cdsa_ringbuffer *rb);
 
 /**
  * @brief Checks if there are more elements to read.
  */
-bool has_next_ringbuffer(RingBufferIterator *iter);
+bool cdsa_has_next_ringbuffer(cdsa_ringbuffer_iterator *iter);
 
 /**
  * @brief Advances the iterator and retrieves a pointer to the next element.
@@ -59,11 +59,11 @@ bool has_next_ringbuffer(RingBufferIterator *iter);
  * * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
  * mutation occurred.
  */
-CDSA_STATUS next_ringbuffer(RingBufferIterator *iter, void **out_value);
+CDSA_STATUS cdsa_next_ringbuffer(cdsa_ringbuffer_iterator *iter, void **out_value);
 
 /**
  * @brief Frees the iterator memory.
  */
-void free_ringbuffer_iterator(RingBufferIterator *iter);
+void cdsa_free_ringbuffer_iterator(cdsa_ringbuffer_iterator *iter);
 
 #endif

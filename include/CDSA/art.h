@@ -17,12 +17,12 @@ typedef struct Node256 Node256;
 // LEAF_NODE (ART = Adaptive Radix Tree (Trie))
 
 typedef struct ArtLeaf ArtLeaf;
-typedef struct ArtTree ArtTree;
+typedef struct cdsa_art_tree cdsa_art_tree;
 
 // LifeCycle
 
-ArtTree *create_art();
-void free_art(ArtTree *tree);
+cdsa_art_tree *cdsa_create_art();
+void cdsa_free_art(cdsa_art_tree *tree);
 
 // Core Operations
 
@@ -38,7 +38,7 @@ void free_art(ArtTree *tree);
  * 'value' before destroying the tree or removing the key, to prevent memory
  * leaks.
  */
-CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value);
+CDSA_STATUS cdsa_insert_art(cdsa_art_tree *tree, const char *key, void *value);
 
 /**
  * @brief Searches for a value by its key.
@@ -47,34 +47,34 @@ CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value);
  * of this memory and should not free it unless they are actively removing it
  * from the tree.
  */
-void *search_art(ArtTree *tree, const char *key);
+void *cdsa_search_art(cdsa_art_tree *tree, const char *key);
 
-void print_art(ArtTree *tree);
+void print_art(cdsa_art_tree *tree);
 
 /**
  * @brief Removes a key-value pair from the tree.
  * * @warning Because the tree does not own the value pointers, calling this
  * function will permanently lose the reference to the value. The caller MUST
- * retrieve and free the value (using search_art) before calling delete_art if
+ * retrieve and free the value (using cdsa_search_art) before calling cdsa_delete_art if
  * the value was dynamically allocated.
  */
-CDSA_STATUS delete_art(ArtTree *tree, const char *key);
-size_t size_art(ArtTree *tree);
+CDSA_STATUS cdsa_delete_art(cdsa_art_tree *tree, const char *key);
+cdsa_size_t cdsa_size_art(cdsa_art_tree *tree);
 
 // --- Iterator API ---
 
-typedef struct ArtIterator ArtIterator;
+typedef struct cdsa_art_iterator cdsa_art_iterator;
 
 /**
  * @brief Creates a new iterator for the Adaptive Radix Tree.
- * @warning The caller must free the iterator using free_art_iterator.
+ * @warning The caller must free the iterator using cdsa_free_art_iterator.
  */
-ArtIterator *create_art_iterator(ArtTree *tree);
+cdsa_art_iterator *cdsa_create_art_iterator(cdsa_art_tree *tree);
 
 /**
  * @brief Checks if there are more key-value pairs to read.
  */
-bool has_next_art(ArtIterator *iter);
+bool cdsa_has_next_art(cdsa_art_iterator *iter);
 
 /**
  * @brief Advances the iterator and retrieves a pointer to the next value.
@@ -85,10 +85,10 @@ bool has_next_art(ArtIterator *iter);
  * * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
  * mutation occurred.
  */
-CDSA_STATUS next_art(ArtIterator *iter, void **out_value);
+CDSA_STATUS cdsa_next_art(cdsa_art_iterator *iter, void **out_value);
 
 /**
  * @brief Frees the iterator memory.
  */
-void free_art_iterator(ArtIterator *iter);
+void cdsa_free_art_iterator(cdsa_art_iterator *iter);
 #endif

@@ -4,8 +4,8 @@
 #include <string.h>
 
 // Helper to quickly verify searches
-void verify(ArtTree *tree, const char *key, const char *expected) {
-  char *result = (char *)search_art(tree, key);
+void verify(cdsa_art_tree *tree, const char *key, const char *expected) {
+  char *result = (char *)cdsa_search_art(tree, key);
   if (result == NULL && expected == NULL) {
     printf("  [PASS] Key '%s' correctly not found.\n", key);
   } else if (result != NULL && expected != NULL &&
@@ -22,20 +22,20 @@ int main() {
   printf("🌲 ART ENGINE: COMPLETE STRESS TEST 🌲\n");
   printf("==========================================\n\n");
 
-  ArtTree *tree = create_art();
+  cdsa_art_tree *tree = cdsa_create_art();
 
   // ---------------------------------------------------------
   printf("--- PHASE 1: PATH COMPRESSION & SPLITTING ---\n");
   // ---------------------------------------------------------
-  insert_art(tree, "understanding", "Payload A");
-  insert_art(tree, "understandable", "Payload B"); // Splits leaf
-  insert_art(tree, "underdog", "Payload C"); // Splits internal compressed path
-  insert_art(tree, "umbrella", "Payload D"); // Splits early prefix
+  cdsa_insert_art(tree, "understanding", "Payload A");
+  cdsa_insert_art(tree, "understandable", "Payload B"); // Splits leaf
+  cdsa_insert_art(tree, "underdog", "Payload C"); // Splits internal compressed path
+  cdsa_insert_art(tree, "umbrella", "Payload D"); // Splits early prefix
 
   verify(tree, "understanding", "Payload A");
   verify(tree, "umbrella", "Payload D");
   verify(tree, "under", NULL); // Prefix exists, but not as a leaf
-  printf("Tree Size: %zu\n\n", size_art(tree));
+  printf("Tree Size: %zu\n\n", cdsa_size_art(tree));
 
   // ---------------------------------------------------------
   printf("--- PHASE 2: WIDTH UPGRADES (NODE4 -> NODE256) ---\n");
@@ -51,14 +51,14 @@ int main() {
     sprintf(key_buffer, "Z%c", (char)i);
     char *payload = malloc(20); // DYNAMIC ALLOCATION
     sprintf(payload, "Data %d", i);
-    insert_art(tree, key_buffer, payload);
+    cdsa_insert_art(tree, key_buffer, payload);
   }
 
   printf("[*] Upgrades complete. Verifying...\n");
   verify(tree, "Z\x0A", "Data 10");
   verify(tree, "Z\x80", "Data 128");
   verify(tree, "Z\xFF", "Data 255");
-  printf("Tree Size: %zu\n\n", size_art(tree));
+  printf("Tree Size: %zu\n\n", cdsa_size_art(tree));
 
   // ---------------------------------------------------------
   printf("--- PHASE 3: DELETION & SHRINKAGE (NODE256 -> NODE4) ---\n");
@@ -68,36 +68,36 @@ int main() {
   // Delete enough to drop below 48 (Triggers Node256 -> Node48)
   for (int i = 255; i >= 48; i--) {
     sprintf(key_buffer, "Z%c", (char)i);
-    void *payload = search_art(tree, key_buffer); // FETCH FIRST
+    void *payload = cdsa_search_art(tree, key_buffer); // FETCH FIRST
     if (payload)
       free(payload);              // FREE FIRST
-    delete_art(tree, key_buffer); // THEN DELETE NODE
+    cdsa_delete_art(tree, key_buffer); // THEN DELETE NODE
   }
   printf("[*] Shrunk to Node48. Deleting more...\n");
 
   // Delete enough to drop below 16 (Triggers Node48 -> Node16)
   for (int i = 47; i >= 16; i--) {
     sprintf(key_buffer, "Z%c", (char)i);
-    void *payload = search_art(tree, key_buffer);
+    void *payload = cdsa_search_art(tree, key_buffer);
     if (payload)
       free(payload);
-    delete_art(tree, key_buffer);
+    cdsa_delete_art(tree, key_buffer);
   }
   printf("[*] Shrunk to Node16. Deleting more...\n");
 
   // Delete enough to drop to 4 (Triggers Node16 -> Node4)
   for (int i = 15; i >= 4; i--) {
     sprintf(key_buffer, "Z%c", (char)i);
-    void *payload = search_art(tree, key_buffer);
+    void *payload = cdsa_search_art(tree, key_buffer);
     if (payload)
       free(payload);
-    delete_art(tree, key_buffer);
+    cdsa_delete_art(tree, key_buffer);
   }
 
   printf("[*] Verifying remaining keys in shrunk node...\n");
   verify(tree, "Z\x03", "Data 3");
   verify(tree, "Z\xFF", NULL); // Proves it was deleted
-  printf("Tree Size: %zu\n\n", size_art(tree));
+  printf("Tree Size: %zu\n\n", cdsa_size_art(tree));
 
   // ---------------------------------------------------------
   printf("--- PHASE 4: PATH MERGING (PREFIX GLUING) ---\n");
@@ -106,7 +106,7 @@ int main() {
   // If we delete "underdog", the Node4 intersection should die,
   // and "understand" should glue back together.
   printf("[*] Deleting 'underdog' to trigger Path Merging...\n");
-  delete_art(tree, "underdog");
+  cdsa_delete_art(tree, "underdog");
 
   printf("[*] Verifying structure survived the merge...\n");
   verify(tree, "understanding", "Payload A");
@@ -118,8 +118,8 @@ int main() {
   // ---------------------------------------------------------
   printf("[*] Inserting Kedis-C style namespaced keys (>10 byte shared "
          "prefix)...\n");
-  insert_art(tree, "session:user:12345:auth_token", "Token A");
-  insert_art(tree, "session:user:12345:refresh_token", "Token B");
+  cdsa_insert_art(tree, "session:user:12345:auth_token", "Token A");
+  cdsa_insert_art(tree, "session:user:12345:refresh_token", "Token B");
 
   printf("[*] Executing adversarial short search (ASan trigger)...\n");
   // Pre-patch: This caused an out-of-bounds read and crashed ASan.
@@ -139,12 +139,12 @@ int main() {
   // 2, 3)
   for (int i = 0; i < 4; i++) {
     sprintf(key_buffer, "Z%c", (char)i);
-    void *payload = search_art(tree, key_buffer);
+    void *payload = cdsa_search_art(tree, key_buffer);
     if (payload)
       free(payload);
   }
 
-  free_art(tree);
+  cdsa_free_art(tree);
   printf("\n✅ Tree completely dismantled. Run ASan/Valgrind to verify 0 "
          "leaks!\n");
   printf("==========================================\n\n");

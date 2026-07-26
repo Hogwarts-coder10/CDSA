@@ -6,20 +6,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct RingBuffer {
+struct cdsa_ringbuffer {
   void *data;
-  size_t head;
-  size_t tail;
-  size_t size;
-  size_t capacity;
-  size_t elem_size;
-  size_t version;
+  cdsa_size_t head;
+  cdsa_size_t tail;
+  cdsa_size_t size;
+  cdsa_size_t capacity;
+  cdsa_size_t elem_size;
+  cdsa_size_t version;
 };
 
 // --- Core Lifecycle ---
 
-RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
-  RingBuffer *rb = CDSA_MALLOC(sizeof(RingBuffer));
+cdsa_ringbuffer *cdsa_create_ringbuffer(cdsa_size_t capacity, cdsa_size_t elem_size) {
+  cdsa_ringbuffer *rb = CDSA_MALLOC(sizeof(cdsa_ringbuffer));
   if (rb == NULL) {
     return NULL;
   }
@@ -41,7 +41,7 @@ RingBuffer *create_ringbuffer(size_t capacity, size_t elem_size) {
   return rb;
 }
 
-void free_ringbuffer(RingBuffer *rb) {
+void cdsa_free_ringbuffer(cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return;
   CDSA_FREE(rb->data);
@@ -50,32 +50,32 @@ void free_ringbuffer(RingBuffer *rb) {
 
 // --- Utilities ---
 
-size_t size_ringbuffer(RingBuffer *rb) {
+cdsa_size_t cdsa_size_ringbuffer(cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return 0;
   return rb->size;
 }
 
-bool is_empty_ringbuffer(RingBuffer *rb) {
+bool cdsa_is_empty_ringbuffer(cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return true;
   return rb->size == 0;
 }
 
-bool is_full_ringbuffer(RingBuffer *rb) {
+bool cdsa_is_full_ringbuffer(cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return false;
   return rb->size == rb->capacity;
 }
 
-// --- Queue Operations (FIFO) ---
+// --- cdsa_queue Operations (FIFO) ---
 
-CDSA_STATUS push_back_ringbuffer(RingBuffer *rb, void *elem) {
+CDSA_STATUS cdsa_push_back_ringbuffer(cdsa_ringbuffer *rb, void *elem) {
   if (rb == NULL || elem == NULL) {
     return CDSA_ERR_INVALID;
   }
 
-  if (is_full_ringbuffer(rb)) {
+  if (cdsa_is_full_ringbuffer(rb)) {
     return CDSA_ERR_FULL; // Buffer is full, drop the insertion explicitly
   }
 
@@ -90,12 +90,12 @@ CDSA_STATUS push_back_ringbuffer(RingBuffer *rb, void *elem) {
   return CDSA_OK;
 }
 
-CDSA_STATUS pop_front_ringbuffer(RingBuffer *rb) {
+CDSA_STATUS cdsa_pop_front_ringbuffer(cdsa_ringbuffer *rb) {
   if (rb == NULL) {
     return CDSA_ERR_INVALID;
   }
 
-  if (is_empty_ringbuffer(rb)) {
+  if (cdsa_is_empty_ringbuffer(rb)) {
     return CDSA_ERR_EMPTY;
   }
 
@@ -108,22 +108,22 @@ CDSA_STATUS pop_front_ringbuffer(RingBuffer *rb) {
   return CDSA_OK;
 }
 
-void *front_ringbuffer(RingBuffer *rb) {
-  if (rb == NULL || is_empty_ringbuffer(rb)) {
+void *cdsa_front_ringbuffer(cdsa_ringbuffer *rb) {
+  if (rb == NULL || cdsa_is_empty_ringbuffer(rb)) {
     return NULL;
   }
 
   return (char *)rb->data + (rb->head * rb->elem_size);
 }
 
-// --- Deque Operations (Double-Ended) ---
+// --- cdsa_deque Operations (Double-Ended) ---
 
-CDSA_STATUS push_front_ringbuffer(RingBuffer *rb, void *elem) {
+CDSA_STATUS cdsa_push_front_ringbuffer(cdsa_ringbuffer *rb, void *elem) {
   if (rb == NULL || elem == NULL) {
     return CDSA_ERR_INVALID;
   }
 
-  if (is_full_ringbuffer(rb)) {
+  if (cdsa_is_full_ringbuffer(rb)) {
     return CDSA_ERR_FULL;
   }
 
@@ -138,12 +138,12 @@ CDSA_STATUS push_front_ringbuffer(RingBuffer *rb, void *elem) {
   return CDSA_OK;
 }
 
-CDSA_STATUS pop_back_ringbuffer(RingBuffer *rb) {
+CDSA_STATUS cdsa_pop_back_ringbuffer(cdsa_ringbuffer *rb) {
   if (rb == NULL) {
     return CDSA_ERR_INVALID;
   }
 
-  if (is_empty_ringbuffer(rb)) {
+  if (cdsa_is_empty_ringbuffer(rb)) {
     return CDSA_ERR_EMPTY;
   }
 
@@ -155,29 +155,29 @@ CDSA_STATUS pop_back_ringbuffer(RingBuffer *rb) {
   return CDSA_OK;
 }
 
-void *back_ringbuffer(RingBuffer *rb) {
-  if (rb == NULL || is_empty_ringbuffer(rb)) {
+void *cdsa_back_ringbuffer(cdsa_ringbuffer *rb) {
+  if (rb == NULL || cdsa_is_empty_ringbuffer(rb)) {
     return NULL;
   }
 
   // The "back" element is always one step behind the current tail
-  size_t last_idx = (rb->tail + rb->capacity - 1) % rb->capacity;
+  cdsa_size_t last_idx = (rb->tail + rb->capacity - 1) % rb->capacity;
   return (char *)rb->data + (last_idx * rb->elem_size);
 }
 
 // --- Iterator Implementation ---
 
-struct RingBufferIterator {
-  RingBuffer *rb;
-  size_t progress;         // Tracks logical steps: from 0 to rb->size - 1
-  size_t snapshot_version; // Safety lock against mid-walk modifications
+struct cdsa_ringbuffer_iterator {
+  cdsa_ringbuffer *rb;
+  cdsa_size_t progress;         // Tracks logical steps: from 0 to rb->size - 1
+  cdsa_size_t snapshot_version; // Safety lock against mid-walk modifications
 };
 
-RingBufferIterator *create_ringbuffer_iterator(RingBuffer *rb) {
+cdsa_ringbuffer_iterator *cdsa_create_ringbuffer_iterator(cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return NULL;
 
-  RingBufferIterator *iter = CDSA_MALLOC(sizeof(RingBufferIterator));
+  cdsa_ringbuffer_iterator *iter = CDSA_MALLOC(sizeof(cdsa_ringbuffer_iterator));
   if (iter == NULL)
     return NULL;
 
@@ -188,7 +188,7 @@ RingBufferIterator *create_ringbuffer_iterator(RingBuffer *rb) {
   return iter;
 }
 
-bool has_next_ringbuffer(RingBufferIterator *iter) {
+bool cdsa_has_next_ringbuffer(cdsa_ringbuffer_iterator *iter) {
   if (iter == NULL || iter->rb == NULL)
     return false;
 
@@ -200,7 +200,7 @@ bool has_next_ringbuffer(RingBufferIterator *iter) {
   return iter->progress < iter->rb->size;
 }
 
-CDSA_STATUS next_ringbuffer(RingBufferIterator *iter, void **out_value) {
+CDSA_STATUS cdsa_next_ringbuffer(cdsa_ringbuffer_iterator *iter, void **out_value) {
   if (iter == NULL || out_value == NULL)
     return CDSA_ERR_INVALID;
 
@@ -209,12 +209,12 @@ CDSA_STATUS next_ringbuffer(RingBufferIterator *iter, void **out_value) {
     return CDSA_ERR_ITER_INVALIDATED;
   }
 
-  if (!has_next_ringbuffer(iter)) {
+  if (!cdsa_has_next_ringbuffer(iter)) {
     return CDSA_ERR_NOT_FOUND;
   }
 
   // Calculate the circular array index based on current progress
-  size_t physical_index =
+  cdsa_size_t physical_index =
       (iter->rb->head + iter->progress) % iter->rb->capacity;
 
   // Point directly to the element at that index
@@ -225,7 +225,7 @@ CDSA_STATUS next_ringbuffer(RingBufferIterator *iter, void **out_value) {
   return CDSA_OK;
 }
 
-void free_ringbuffer_iterator(RingBufferIterator *iter) {
+void cdsa_free_ringbuffer_iterator(cdsa_ringbuffer_iterator *iter) {
   if (iter == NULL)
     return;
   CDSA_FREE(iter);

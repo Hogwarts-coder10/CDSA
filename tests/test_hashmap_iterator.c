@@ -7,7 +7,7 @@
 void test_hashmap_iterator() {
   printf("\n=== Testing HashMap Iterator ===\n");
 
-  HashMap *map = create_hashmap(16);
+  HashMap *map = cdsa_create_hashmap(16);
 
   // 1. Allocate some values (Remember: The caller owns these!)
   int *val1 = CDSA_MALLOC(sizeof(int));
@@ -22,14 +22,14 @@ void test_hashmap_iterator() {
   insert_hashmap(map, "Charlie", val3);
 
   // 2. Pass One: Read the data using the Iterator
-  HashMapIterator *iter = create_hashmap_iterator(map);
+  HashMapIterator *iter = cdsa_create_hashmap_iterator(map);
   const char *key;
   void *value;
   int count = 0;
 
   printf("Iterating map contents:\n");
-  while (has_next_hashmap(iter)) {
-    CDSA_STATUS status = next_hashmap(iter, &key, &value);
+  while (cdsa_has_next_hashmap(iter)) {
+    CDSA_STATUS status = cdsa_next_hashmap(iter, &key, &value);
     assert(status == CDSA_OK);
 
     printf("  -> %s : %d\n", key, *(int *)value);
@@ -38,21 +38,21 @@ void test_hashmap_iterator() {
   printf("Total elements seen: %d (Expected: 3)\n", count);
   assert(count == 3);
 
-  free_hashmap_iterator(iter);
+  cdsa_free_hashmap_iterator(iter);
 
   // 3. Pass Two: Use a NEW iterator to safely free the caller-owned values!
   // This proves why the iterator is so powerful for Kedis-C.
-  HashMapIterator *cleanup_iter = create_hashmap_iterator(map);
+  HashMapIterator *cleanup_iter = cdsa_create_hashmap_iterator(map);
 
-  while (has_next_hashmap(cleanup_iter)) {
-    next_hashmap(cleanup_iter, &key, &value);
+  while (cdsa_has_next_hashmap(cleanup_iter)) {
+    cdsa_next_hashmap(cleanup_iter, &key, &value);
     CDSA_FREE(value); // Freeing the integer pointers we malloc'd at the start
   }
 
-  free_hashmap_iterator(cleanup_iter);
+  cdsa_free_hashmap_iterator(cleanup_iter);
 
   // 4. Finally, free the map itself
-  free_hashmap(map);
+  cdsa_free_hashmap(map);
 
   printf("=== Iterator Test Complete ===\n\n");
 }
@@ -62,7 +62,7 @@ void test_iterator_mutation_guard() {
 
   // 1. Create a map with a deliberately TINY capacity (e.g., 4)
   // so it's very easy to trigger a resize.
-  HashMap *map = create_hashmap(4);
+  HashMap *map = cdsa_create_hashmap(4);
 
   // 2. Insert just enough to fill it without resizing
   int *v1 = CDSA_MALLOC(sizeof(int));
@@ -73,12 +73,12 @@ void test_iterator_mutation_guard() {
   insert_hashmap(map, "Key2", v2);
 
   // 3. Start iterating
-  HashMapIterator *iter = create_hashmap_iterator(map);
+  HashMapIterator *iter = cdsa_create_hashmap_iterator(map);
   const char *key;
   void *value;
 
   // Read the first element safely
-  CDSA_STATUS status = next_hashmap(iter, &key, &value);
+  CDSA_STATUS status = cdsa_next_hashmap(iter, &key, &value);
   assert(status == CDSA_OK);
   printf("Read first key safely: %s\n", key);
 
@@ -97,7 +97,7 @@ void test_iterator_mutation_guard() {
 
   // 5. THE TEST: Try to use the old iterator again
   printf("Attempting to use the old iterator...\n");
-  status = next_hashmap(iter, &key, &value);
+  status = cdsa_next_hashmap(iter, &key, &value);
 
   if (status == CDSA_ERR_ITER_INVALIDATED) {
     printf("[SUCCESS] Iterator correctly detected structural mutation and "
@@ -107,21 +107,21 @@ void test_iterator_mutation_guard() {
     assert(false); // Fail the test immediately
   }
 
-  // Also check has_next_hashmap
-  assert(has_next_hashmap(iter) == false);
+  // Also check cdsa_has_next_hashmap
+  assert(cdsa_has_next_hashmap(iter) == false);
 
   // 6. Cleanup
-  free_hashmap_iterator(iter);
+  cdsa_free_hashmap_iterator(iter);
 
   // We must create a fresh iterator to clean up the memory,
   // because the old one is permanently locked out!
-  HashMapIterator *cleanup_iter = create_hashmap_iterator(map);
-  while (has_next_hashmap(cleanup_iter)) {
-    next_hashmap(cleanup_iter, &key, &value);
+  HashMapIterator *cleanup_iter = cdsa_create_hashmap_iterator(map);
+  while (cdsa_has_next_hashmap(cleanup_iter)) {
+    cdsa_next_hashmap(cleanup_iter, &key, &value);
     CDSA_FREE(value);
   }
-  free_hashmap_iterator(cleanup_iter);
-  free_hashmap(map);
+  cdsa_free_hashmap_iterator(cleanup_iter);
+  cdsa_free_hashmap(map);
 
   printf("=== Mutation Guard Test Complete ===\n\n");
 }

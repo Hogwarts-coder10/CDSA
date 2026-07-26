@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct Queue Queue;
+typedef struct cdsa_queue cdsa_queue;
 
-Queue *create_queue(size_t capacity, size_t elem_size);
-void free_queue(Queue *queue);
+cdsa_queue *cdsa_create_queue(cdsa_size_t capacity, cdsa_size_t elem_size);
+void cdsa_free_queue(cdsa_queue *queue);
 /**
  * @brief Pushes an element into the collection.
  *
@@ -19,21 +19,21 @@ void free_queue(Queue *queue);
  *   the caller retains ownership of that underlying memory and must free it.
  */
 
-CDSA_STATUS enqueue(Queue *queue, void *elem);
-CDSA_STATUS dequeue(Queue *queue);
-void *front_queue(Queue *queue);
+CDSA_STATUS cdsa_enqueue(cdsa_queue *queue, void *elem);
+CDSA_STATUS cdsa_dequeue(cdsa_queue *queue);
+void *cdsa_front_queue(cdsa_queue *queue);
 
-size_t size_queue(Queue *queue);
-bool is_empty_queue(Queue *queue);
-bool is_full_queue(Queue *queue);
+cdsa_size_t cdsa_size_queue(cdsa_queue *queue);
+bool cdsa_is_empty_queue(cdsa_queue *queue);
+bool cdsa_is_full_queue(cdsa_queue *queue);
 
 // --- Iterator API ---
 
-typedef struct QueueIterator QueueIterator;
+typedef struct cdsa_queue_iterator cdsa_queue_iterator;
 
-QueueIterator *create_queue_iterator(Queue *q);
-bool has_next_queue(QueueIterator *iter);
-CDSA_STATUS next_queue(QueueIterator *iter, void **out_value);
-void free_queue_iterator(QueueIterator *iter);
+cdsa_queue_iterator *cdsa_create_queue_iterator(cdsa_queue *q);
+bool cdsa_has_next_queue(cdsa_queue_iterator *iter);
+CDSA_STATUS cdsa_next_queue(cdsa_queue_iterator *iter, void **out_value);
+void cdsa_free_queue_iterator(cdsa_queue_iterator *iter);
 
 #endif

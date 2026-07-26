@@ -10,12 +10,12 @@
 typedef struct SkipList SkipList;
 
 // LifeCycle
-SkipList *create_skiplist();
-void free_skiplist(SkipList *sl);
+SkipList *cdsa_create_skiplist();
+void cdsa_free_skiplist(SkipList *sl);
 
 // Core operations
 
-size_t size_skiplist(SkipList *sl);
+cdsa_size_t cdsa_size_skiplist(SkipList *sl);
 int level_skiplist(SkipList *sl);
 
 // Returns true if inserted, false if it failed (like out of memory)
@@ -43,27 +43,27 @@ typedef struct SkipListIterator SkipListIterator;
 
 /**
  * @brief creates a new Iterartor for SkipList
- * @warning the caller must free the Iterartor using free_skiplist_iterator
+ * @warning the caller must free the Iterartor using cdsa_free_skiplist_iterator
  */
 
-SkipListIterator *create_skiplist_iterator(SkipList *sl);
+SkipListIterator *cdsa_create_skiplist_iterator(SkipList *sl);
 
 /**
  * @brief Checks if there are more nodes to read.
  */
-bool has_next_skiplist(SkipListIterator *iter);
+bool cdsa_has_next_skiplist(SkipListIterator *iter);
 
 /**
  * @brief Advances the iterator and retrieves the next score and value.
  * @param out_score Pointer to store the score (optional, can be NULL).
  * @param out_value Pointer to store the value string (optional, can be NULL).
  */
-CDSA_STATUS next_skiplist(SkipListIterator *iter, double *out_score,
+CDSA_STATUS cdsa_next_skiplist(SkipListIterator *iter, double *out_score,
                           const char **out_value);
 
 /**
  * @brief Frees the iterator memory.
  */
-void free_skiplist_iterator(SkipListIterator *iter);
+void cdsa_free_skiplist_iterator(SkipListIterator *iter);
 
 #endif

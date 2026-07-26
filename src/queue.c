@@ -5,17 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct Queue {
-  RingBuffer *rb;
+struct cdsa_queue {
+  cdsa_ringbuffer *rb;
 };
 
-Queue *create_queue(size_t capacity, size_t elem_size) {
-  Queue *queue = CDSA_MALLOC(sizeof(Queue));
+cdsa_queue *cdsa_create_queue(cdsa_size_t capacity, cdsa_size_t elem_size) {
+  cdsa_queue *queue = CDSA_MALLOC(sizeof(cdsa_queue));
   if (queue == NULL) {
     return NULL;
   }
 
-  queue->rb = create_ringbuffer(capacity, elem_size);
+  queue->rb = cdsa_create_ringbuffer(capacity, elem_size);
 
   if (queue->rb == NULL) {
     CDSA_FREE(queue);
@@ -25,75 +25,75 @@ Queue *create_queue(size_t capacity, size_t elem_size) {
   return queue;
 }
 
-void free_queue(Queue *queue) {
+void cdsa_free_queue(cdsa_queue *queue) {
   if (queue == NULL)
     return;
 
-  free_ringbuffer(queue->rb);
+  cdsa_free_ringbuffer(queue->rb);
   CDSA_FREE(queue);
 }
 
-CDSA_STATUS enqueue(Queue *queue, void *elem) {
+CDSA_STATUS cdsa_enqueue(cdsa_queue *queue, void *elem) {
   if (queue == NULL || elem == NULL) {
     return CDSA_ERR_INVALID;
   }
-  // Enqueue is just a restricted push_back
-  return push_back_ringbuffer(queue->rb, elem);
+  // Enqueue is just a restricted cdsa_push_back
+  return cdsa_push_back_ringbuffer(queue->rb, elem);
 }
 
-CDSA_STATUS dequeue(Queue *queue) {
+CDSA_STATUS cdsa_dequeue(cdsa_queue *queue) {
   if (queue == NULL) {
     return CDSA_ERR_INVALID;
   }
-  // Dequeue is just a restricted pop_front
-  return pop_front_ringbuffer(queue->rb);
+  // Dequeue is just a restricted cdsa_pop_front
+  return cdsa_pop_front_ringbuffer(queue->rb);
 }
 
-void *front_queue(Queue *queue) {
+void *cdsa_front_queue(cdsa_queue *queue) {
   if (queue == NULL)
     return NULL;
-  return front_ringbuffer(queue->rb);
+  return cdsa_front_ringbuffer(queue->rb);
 }
 
 // --- Utilities ---
 
-size_t size_queue(Queue *queue) {
+cdsa_size_t cdsa_size_queue(cdsa_queue *queue) {
   if (queue == NULL)
     return 0;
-  return size_ringbuffer(queue->rb);
+  return cdsa_size_ringbuffer(queue->rb);
 }
 
-bool is_empty_queue(Queue *queue) {
+bool cdsa_is_empty_queue(cdsa_queue *queue) {
   if (queue == NULL)
     return true;
-  return is_empty_ringbuffer(queue->rb);
+  return cdsa_is_empty_ringbuffer(queue->rb);
 }
 
-bool is_full_queue(Queue *queue) {
+bool cdsa_is_full_queue(cdsa_queue *queue) {
   if (queue == NULL)
     return false;
-  return is_full_ringbuffer(queue->rb);
+  return cdsa_is_full_ringbuffer(queue->rb);
 }
 
 // --- Iterator Implementation ---
 
 // --- Iterator Implementation ---
 
-QueueIterator *create_queue_iterator(Queue *q) {
+cdsa_queue_iterator *cdsa_create_queue_iterator(cdsa_queue *q) {
   if (q == NULL)
     return NULL;
-  // Route directly to the underlying RingBuffer
-  return (QueueIterator *)create_ringbuffer_iterator(q->rb);
+  // Route directly to the underlying cdsa_ringbuffer
+  return (cdsa_queue_iterator *)cdsa_create_ringbuffer_iterator(q->rb);
 }
 
-bool has_next_queue(QueueIterator *iter) {
-  return has_next_ringbuffer((RingBufferIterator *)iter);
+bool cdsa_has_next_queue(cdsa_queue_iterator *iter) {
+  return cdsa_has_next_ringbuffer((cdsa_ringbuffer_iterator *)iter);
 }
 
-CDSA_STATUS next_queue(QueueIterator *iter, void **out_value) {
-  return next_ringbuffer((RingBufferIterator *)iter, out_value);
+CDSA_STATUS cdsa_next_queue(cdsa_queue_iterator *iter, void **out_value) {
+  return cdsa_next_ringbuffer((cdsa_ringbuffer_iterator *)iter, out_value);
 }
 
-void free_queue_iterator(QueueIterator *iter) {
-  free_ringbuffer_iterator((RingBufferIterator *)iter);
+void cdsa_free_queue_iterator(cdsa_queue_iterator *iter) {
+  cdsa_free_ringbuffer_iterator((cdsa_ringbuffer_iterator *)iter);
 }

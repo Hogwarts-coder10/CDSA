@@ -3,9 +3,9 @@
 
 int main(void) {
 
-  KString *str = create_kstring();
+  KString *str = cdsa_create_kstring();
 
-  printf("Size: %zu\n", size_kstring(str));
+  printf("Size: %zu\n", cdsa_size_kstring(str));
 
   printf("String: '%s'\n", c_str_kstring(str));
 
@@ -15,7 +15,7 @@ int main(void) {
 
   printf("%s\n", c_str_kstring(str));
 
-  free_kstring(str);
+  cdsa_free_kstring(str);
 
   return 0;
 }

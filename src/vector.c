@@ -7,16 +7,16 @@
 
 #define INITIAL_CAPACITY 4
 
-struct Vector {
+struct cdsa_vector {
   void *data;
-  size_t size;
-  size_t capacity;
-  size_t elem_size;
-  size_t version;
+  cdsa_size_t size;
+  cdsa_size_t capacity;
+  cdsa_size_t elem_size;
+  cdsa_size_t version;
 };
 
-Vector *create_vector(size_t elem_size) {
-  Vector *vec = CDSA_MALLOC(sizeof(Vector));
+cdsa_vector *cdsa_create_vector(cdsa_size_t elem_size) {
+  cdsa_vector *vec = CDSA_MALLOC(sizeof(cdsa_vector));
   if (vec == NULL)
     return NULL;
 
@@ -34,7 +34,7 @@ Vector *create_vector(size_t elem_size) {
   return vec;
 }
 
-CDSA_STATUS push_vector(Vector *vec, void *elem) {
+CDSA_STATUS cdsa_push_vector(cdsa_vector *vec, void *elem) {
   if (vec == NULL || elem == NULL)
     return CDSA_ERR_INVALID;
 
@@ -55,20 +55,20 @@ CDSA_STATUS push_vector(Vector *vec, void *elem) {
   return CDSA_OK;
 }
 
-void *get_vector(Vector *vec, size_t index) {
+void *get_vector(cdsa_vector *vec, cdsa_size_t index) {
   if (vec == NULL || index >= vec->size)
     return NULL;
   return (char *)vec->data + (index * vec->elem_size);
 }
 
-void free_vector(Vector *vec) {
+void cdsa_free_vector(cdsa_vector *vec) {
   if (vec == NULL)
     return;
   CDSA_FREE(vec->data);
   CDSA_FREE(vec);
 }
 
-CDSA_STATUS pop_vector(Vector *vec) {
+CDSA_STATUS cdsa_pop_vector(cdsa_vector *vec) {
   if (vec == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -82,31 +82,31 @@ CDSA_STATUS pop_vector(Vector *vec) {
   return CDSA_OK;
 }
 
-void *front_vector(Vector *vec) {
+void *cdsa_front_vector(cdsa_vector *vec) {
   if (vec == NULL || vec->size == 0)
     return NULL;
   return vec->data;
 }
 
-void *back_vector(Vector *vec) {
+void *cdsa_back_vector(cdsa_vector *vec) {
   if (vec == NULL || vec->size == 0)
     return NULL;
   return (char *)vec->data + ((vec->size - 1) * vec->elem_size);
 }
 
-size_t size_vector(Vector *vec) {
+cdsa_size_t cdsa_size_vector(cdsa_vector *vec) {
   if (vec == NULL)
     return 0;
   return vec->size;
 }
 
-size_t capacity_vector(Vector *vec) {
+cdsa_size_t capacity_vector(cdsa_vector *vec) {
   if (vec == NULL)
     return 0;
   return vec->capacity;
 }
 
-CDSA_STATUS set_vector(Vector *vec, size_t index, void *elem) {
+CDSA_STATUS set_vector(cdsa_vector *vec, cdsa_size_t index, void *elem) {
   if (vec == NULL || elem == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -120,13 +120,13 @@ CDSA_STATUS set_vector(Vector *vec, size_t index, void *elem) {
   return CDSA_OK;
 }
 
-void clear_vector(Vector *vec) {
+void cdsa_clear_vector(cdsa_vector *vec) {
   if (vec == NULL)
     return;
   vec->size = 0;
 }
 
-bool is_empty_vector(Vector *vec) {
+bool cdsa_is_empty_vector(cdsa_vector *vec) {
   if (vec == NULL)
     return true;
   return vec->size == 0;
@@ -134,17 +134,17 @@ bool is_empty_vector(Vector *vec) {
 
 // --- Iterator Implementation ---
 
-struct VectorIterator {
-  Vector *vec;
-  size_t current_index;
-  size_t snapshot_version;
+struct cdsa_vector_iterator {
+  cdsa_vector *vec;
+  cdsa_size_t current_index;
+  cdsa_size_t snapshot_version;
 };
 
-VectorIterator *create_vector_iterator(Vector *vec) {
+cdsa_vector_iterator *cdsa_create_vector_iterator(cdsa_vector *vec) {
   if (vec == NULL)
     return NULL;
 
-  VectorIterator *iter = CDSA_MALLOC(sizeof(VectorIterator));
+  cdsa_vector_iterator *iter = CDSA_MALLOC(sizeof(cdsa_vector_iterator));
   if (iter == NULL)
     return NULL;
 
@@ -155,7 +155,7 @@ VectorIterator *create_vector_iterator(Vector *vec) {
   return iter;
 }
 
-bool has_next_vector(VectorIterator *iter) {
+bool cdsa_has_next_vector(cdsa_vector_iterator *iter) {
   if (iter == NULL || iter->vec == NULL)
     return false;
 
@@ -167,7 +167,7 @@ bool has_next_vector(VectorIterator *iter) {
   return iter->current_index < iter->vec->size;
 }
 
-CDSA_STATUS next_vector(VectorIterator *iter, void **out_value) {
+CDSA_STATUS cdsa_next_vector(cdsa_vector_iterator *iter, void **out_value) {
   if (iter == NULL || out_value == NULL)
     return CDSA_ERR_INVALID;
 
@@ -176,7 +176,7 @@ CDSA_STATUS next_vector(VectorIterator *iter, void **out_value) {
     return CDSA_ERR_ITER_INVALIDATED;
   }
 
-  if (!has_next_vector(iter)) {
+  if (!cdsa_has_next_vector(iter)) {
     return CDSA_ERR_NOT_FOUND;
   }
 
@@ -191,7 +191,7 @@ CDSA_STATUS next_vector(VectorIterator *iter, void **out_value) {
   return CDSA_OK;
 }
 
-void free_vector_iterator(VectorIterator *iter) {
+void cdsa_free_vector_iterator(cdsa_vector_iterator *iter) {
   if (iter == NULL)
     return;
   CDSA_FREE(iter);

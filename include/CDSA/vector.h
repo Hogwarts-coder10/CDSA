@@ -5,9 +5,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct Vector Vector;
+typedef struct cdsa_vector cdsa_vector;
 
-Vector *create_vector(size_t elem_size);
+cdsa_vector *cdsa_create_vector(cdsa_size_t elem_size);
 /**
  * @brief Pushes an element into the collection.
  *
@@ -18,32 +18,32 @@ Vector *create_vector(size_t elem_size);
  *   the caller retains ownership of that underlying memory and must free it.
  */
 
-CDSA_STATUS push_vector(Vector *vec, void *elem);
-void *get_vector(Vector *vec, size_t index);
-void free_vector(Vector *vec);
-CDSA_STATUS pop_vector(Vector *vec);
-void *front_vector(Vector *vec);
-void *back_vector(Vector *vec);
-size_t size_vector(Vector *vec);
-size_t capacity_vector(Vector *vec);
-CDSA_STATUS set_vector(Vector *vec, size_t index, void *elem);
-void clear_vector(Vector *vec);
-bool is_empty_vector(Vector *vec);
+CDSA_STATUS cdsa_push_vector(cdsa_vector *vec, void *elem);
+void *get_vector(cdsa_vector *vec, cdsa_size_t index);
+void cdsa_free_vector(cdsa_vector *vec);
+CDSA_STATUS cdsa_pop_vector(cdsa_vector *vec);
+void *cdsa_front_vector(cdsa_vector *vec);
+void *cdsa_back_vector(cdsa_vector *vec);
+cdsa_size_t cdsa_size_vector(cdsa_vector *vec);
+cdsa_size_t capacity_vector(cdsa_vector *vec);
+CDSA_STATUS set_vector(cdsa_vector *vec, cdsa_size_t index, void *elem);
+void cdsa_clear_vector(cdsa_vector *vec);
+bool cdsa_is_empty_vector(cdsa_vector *vec);
 
 // --- Iterator API ---
 
-typedef struct VectorIterator VectorIterator;
+typedef struct cdsa_vector_iterator cdsa_vector_iterator;
 
 /**
- * @brief Creates a new iterator for the Vector.
- * @warning The caller must free the iterator using free_vector_iterator.
+ * @brief Creates a new iterator for the cdsa_vector.
+ * @warning The caller must free the iterator using cdsa_free_vector_iterator.
  */
-VectorIterator *create_vector_iterator(Vector *vec);
+cdsa_vector_iterator *cdsa_create_vector_iterator(cdsa_vector *vec);
 
 /**
  * @brief Checks if there are more elements to read.
  */
-bool has_next_vector(VectorIterator *iter);
+bool cdsa_has_next_vector(cdsa_vector_iterator *iter);
 
 /**
  * @brief Advances the iterator and retrieves a pointer to the next element.
@@ -56,10 +56,10 @@ bool has_next_vector(VectorIterator *iter);
  * * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
  * mutation occurred during the walk pass.
  */
-CDSA_STATUS next_vector(VectorIterator *iter, void **out_value);
+CDSA_STATUS cdsa_next_vector(cdsa_vector_iterator *iter, void **out_value);
 
 /**
  * @brief Frees the iterator memory.
  */
-void free_vector_iterator(VectorIterator *iter);
+void cdsa_free_vector_iterator(cdsa_vector_iterator *iter);
 #endif

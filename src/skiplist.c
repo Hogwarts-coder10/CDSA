@@ -16,7 +16,7 @@ typedef struct SkipNode {
 struct SkipList {
   SkipNode *header; // starting node (dummy)
   int level;        // current highest level in use
-  size_t size;      // total number of items
+  cdsa_size_t size;      // total number of items
 };
 
 // --- Internal Helpers ---
@@ -34,14 +34,14 @@ static int random_level() {
 
 // Portable strdup — no POSIX feature-test macro required
 static char *safe_strdup(const char *s) {
-  size_t len = strlen(s) + 1;
+  cdsa_size_t len = strlen(s) + 1;
   char *dup = CDSA_MALLOC(len);
   if (dup)
     memcpy(dup, s, len);
   return dup;
 }
 
-static SkipNode *create_node(int level, double score, const char *value) {
+static SkipNode *cdsa_create_node(int level, double score, const char *value) {
   SkipNode *node = CDSA_MALLOC(sizeof(SkipNode));
   if (node == NULL)
     return NULL;
@@ -66,7 +66,7 @@ static SkipNode *create_node(int level, double score, const char *value) {
 
 // --- Lifecycle ---
 
-SkipList *create_skiplist() {
+SkipList *cdsa_create_skiplist() {
   SkipList *sl = CDSA_MALLOC(sizeof(SkipList));
 
   if (sl == NULL) {
@@ -76,7 +76,7 @@ SkipList *create_skiplist() {
   sl->size = 0;
 
   // The Dummy Header sits at max level but holds no real data
-  sl->header = create_node(SKIPLIST_MAX_LEVEL, 0.0, "");
+  sl->header = cdsa_create_node(SKIPLIST_MAX_LEVEL, 0.0, "");
 
   if (sl->header == NULL) {
     CDSA_FREE(sl);
@@ -86,7 +86,7 @@ SkipList *create_skiplist() {
   return sl;
 }
 
-void free_skiplist(SkipList *sl) {
+void cdsa_free_skiplist(SkipList *sl) {
   if (sl == NULL)
     return;
 
@@ -103,7 +103,7 @@ void free_skiplist(SkipList *sl) {
 
 // --- Core Operations ---
 
-size_t size_skiplist(SkipList *sl) {
+cdsa_size_t cdsa_size_skiplist(SkipList *sl) {
   if (sl == NULL)
     return 0;
   return sl->size;
@@ -144,7 +144,7 @@ CDSA_STATUS insert_skiplist(SkipList *sl, double score, const char *value) {
   int new_level = random_level();
 
   // If it's the tallest node we've ever seen, update the header's routing.
-  // Save old level so we can roll back if create_node fails.
+  // Save old level so we can roll back if cdsa_create_node fails.
   int old_level = sl->level;
   if (new_level > sl->level) {
     for (int i = sl->level; i < new_level; i++) {
@@ -154,7 +154,7 @@ CDSA_STATUS insert_skiplist(SkipList *sl, double score, const char *value) {
   }
 
   // Create the node and splice it in using our breadcrumbs
-  SkipNode *new_node = create_node(new_level, score, value);
+  SkipNode *new_node = cdsa_create_node(new_level, score, value);
   if (new_node == NULL) {
     sl->level = old_level; // undo the level bump, list stays consistent
     return CDSA_ERR_OOM;
@@ -290,7 +290,7 @@ struct SkipListIterator {
   SkipNode *current;
 };
 
-SkipListIterator *create_skiplist_iterator(SkipList *sl) {
+SkipListIterator *cdsa_create_skiplist_iterator(SkipList *sl) {
   if (sl == NULL)
     return NULL;
 
@@ -305,13 +305,13 @@ SkipListIterator *create_skiplist_iterator(SkipList *sl) {
   return iter;
 }
 
-bool has_next_skiplist(SkipListIterator *iter) {
+bool cdsa_has_next_skiplist(SkipListIterator *iter) {
   if (iter == NULL)
     return false;
   return iter->current != NULL;
 }
 
-CDSA_STATUS next_skiplist(SkipListIterator *iter, double *out_score,
+CDSA_STATUS cdsa_next_skiplist(SkipListIterator *iter, double *out_score,
                           const char **out_value) {
   if (iter == NULL || iter->current == NULL) {
     return CDSA_ERR_NOT_FOUND;
@@ -331,7 +331,7 @@ CDSA_STATUS next_skiplist(SkipListIterator *iter, double *out_score,
   return CDSA_OK;
 }
 
-void free_skiplist_iterator(SkipListIterator *iter) {
+void cdsa_free_skiplist_iterator(SkipListIterator *iter) {
   if (iter == NULL)
     return;
   CDSA_FREE(iter);

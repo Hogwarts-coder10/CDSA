@@ -7,11 +7,11 @@
 
 typedef bool (*PriorityCompareFn)(void *a, void *b);
 
-typedef struct PriorityQueue PriorityQueue;
+typedef struct cdsa_priority_queue cdsa_priority_queue;
 
 // --- LifeCycle ---
-PriorityQueue *create_pq(size_t elem_size, PriorityCompareFn cmp_func);
-void free_pq(PriorityQueue *pq);
+cdsa_priority_queue *cdsa_create_pq(cdsa_size_t elem_size, PriorityCompareFn cmp_func);
+void cdsa_free_pq(cdsa_priority_queue *pq);
 
 // --- Operations ---
 /**
@@ -19,42 +19,42 @@ void free_pq(PriorityQueue *pq);
  * position.
  * * @ownership
  * - VALUE: The library creates a shallow, byte-for-byte copy using memcpy
- * based on the queue's configured elem_size (managed by the underlying Vector).
+ * based on the queue's configured elem_size (managed by the underlying cdsa_vector).
  * - MEMORY: If the element is a pointer to dynamically allocated memory,
  * the caller retains ownership of that underlying memory and must free it
  * after popping it or before destroying the queue.
  */
-CDSA_STATUS push_pq(PriorityQueue *pq, void *elem);
+CDSA_STATUS cdsa_push_pq(cdsa_priority_queue *pq, void *elem);
 
 // Copies the highest priority element into 'out_elem' and removes it.
 // Returns false if the queue is empty.
-CDSA_STATUS pop_pq(PriorityQueue *pq, void *out_elem);
+CDSA_STATUS cdsa_pop_pq(cdsa_priority_queue *pq, void *out_elem);
 
 // Returns a pointer to the highest priority element without removing it.
-void *peek_pq(PriorityQueue *pq);
+void *cdsa_peek_pq(cdsa_priority_queue *pq);
 
-size_t size_pq(PriorityQueue *pq);
-bool is_empty_pq(PriorityQueue *pq);
-void clear_pq(PriorityQueue *pq);
+cdsa_size_t cdsa_size_pq(cdsa_priority_queue *pq);
+bool cdsa_is_empty_pq(cdsa_priority_queue *pq);
+void cdsa_clear_pq(cdsa_priority_queue *pq);
 
 // --- Iterator API ---
 
-// Typedef directly to the VectorIterator
-typedef struct VectorIterator PriorityQueueIterator;
+// Typedef directly to the cdsa_vector_iterator
+typedef struct cdsa_vector_iterator cdsa_priority_queue_iterator;
 
 /**
- * @brief Creates a new iterator for the Priority Queue.
+ * @brief Creates a new iterator for the Priority cdsa_queue.
  * @warning The caller must free the iterator using
- * free_priority_queue_iterator.
+ * cdsa_free_priority_queue_iterator.
  * @note Elements are yielded in heap-array order (level-order), NOT strictly
  * sorted order.
  */
-PriorityQueueIterator *create_priority_queue_iterator(PriorityQueue *pq);
+cdsa_priority_queue_iterator *cdsa_create_priority_queue_iterator(cdsa_priority_queue *pq);
 
-bool has_next_priority_queue(PriorityQueueIterator *iter);
+bool cdsa_has_next_priority_queue(cdsa_priority_queue_iterator *iter);
 
-CDSA_STATUS next_priority_queue(PriorityQueueIterator *iter, void **out_value);
+CDSA_STATUS cdsa_next_priority_queue(cdsa_priority_queue_iterator *iter, void **out_value);
 
-void free_priority_queue_iterator(PriorityQueueIterator *iter);
+void cdsa_free_priority_queue_iterator(cdsa_priority_queue_iterator *iter);
 
 #endif

@@ -7,9 +7,9 @@
 void test_skiplist_iterator() {
   printf("\n=== Testing SkipList Iterator ===\n");
 
-  // Create the SkipList (adjust arguments if your create_skiplist takes
+  // Create the SkipList (adjust arguments if your cdsa_create_skiplist takes
   // max_level/p)
-  SkipList *sl = create_skiplist();
+  SkipList *sl = cdsa_create_skiplist();
 
   // 1. Insert data OUT OF ORDER
   insert_skiplist(sl, 42.5, "Douglas");
@@ -18,7 +18,7 @@ void test_skiplist_iterator() {
   insert_skiplist(sl, 25.0, "Bob");
 
   // 2. Read the data using the Iterator
-  SkipListIterator *iter = create_skiplist_iterator(sl);
+  SkipListIterator *iter = cdsa_create_skiplist_iterator(sl);
   double score;
   const char *value;
   int count = 0;
@@ -29,8 +29,8 @@ void test_skiplist_iterator() {
 
   printf("Iterating SkipList contents (Should be sorted by score):\n");
 
-  while (has_next_skiplist(iter)) {
-    CDSA_STATUS status = next_skiplist(iter, &score, &value);
+  while (cdsa_has_next_skiplist(iter)) {
+    CDSA_STATUS status = cdsa_next_skiplist(iter, &score, &value);
     assert(status == CDSA_OK);
 
     printf("  -> [%.1f] : %s\n", score, value);
@@ -44,12 +44,12 @@ void test_skiplist_iterator() {
   printf("Total elements seen: %d (Expected: 4)\n", count);
   assert(count == 4);
 
-  free_skiplist_iterator(iter);
+  cdsa_free_skiplist_iterator(iter);
 
   // 3. Free the SkipList
   // (No second cleanup pass needed here since SkipList owns the duplicated
   // strings!)
-  free_skiplist(sl);
+  cdsa_free_skiplist(sl);
 
   printf("=== SkipList Iterator Test Complete ===\n\n");
 }

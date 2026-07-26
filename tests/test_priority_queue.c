@@ -29,39 +29,39 @@ int main() {
   // --- Test 1: Min-Heap ---
   printf("--- Phase 1: Min-Heap ---\n");
   // Notice we pass sizeof(int) so the queue knows how big our data blocks are!
-  PriorityQueue *min_pq = create_pq(sizeof(int), min_compare);
+  cdsa_priority_queue *min_pq = cdsa_create_pq(sizeof(int), min_compare);
 
   for (int i = 0; i < num_count; i++) {
-    push_pq(min_pq, &nums[i]);
+    cdsa_push_pq(min_pq, &nums[i]);
   }
 
   printf("Extracted (should be ascending): ");
   int out_val;
-  while (!is_empty_pq(min_pq)) {
+  while (!cdsa_is_empty_pq(min_pq)) {
     // Pop safely copies the value into our out_val variable
-    if (pop_pq(min_pq, &out_val)) {
+    if (cdsa_pop_pq(min_pq, &out_val)) {
       printf("%d ", out_val);
     }
   }
   printf("\n\n");
-  free_pq(min_pq);
+  cdsa_free_pq(min_pq);
 
   // --- Test 2: Max-Heap ---
   printf("--- Phase 2: Max-Heap ---\n");
-  PriorityQueue *max_pq = create_pq(sizeof(int), max_compare);
+  cdsa_priority_queue *max_pq = cdsa_create_pq(sizeof(int), max_compare);
 
   for (int i = 0; i < num_count; i++) {
-    push_pq(max_pq, &nums[i]);
+    cdsa_push_pq(max_pq, &nums[i]);
   }
 
   printf("Extracted (should be descending): ");
-  while (!is_empty_pq(max_pq)) {
-    if (pop_pq(max_pq, &out_val)) {
+  while (!cdsa_is_empty_pq(max_pq)) {
+    if (cdsa_pop_pq(max_pq, &out_val)) {
       printf("%d ", out_val);
     }
   }
   printf("\n\n");
-  free_pq(max_pq);
+  cdsa_free_pq(max_pq);
 
   printf("✅ Tests complete. Run Valgrind to verify!\n");
   return 0;

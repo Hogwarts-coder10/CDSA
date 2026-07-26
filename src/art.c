@@ -61,10 +61,10 @@ struct ArtLeaf {
   void *value;
 };
 
-struct ArtTree {
+struct cdsa_art_tree {
   void *root;
-  size_t size;
-  size_t version;
+  cdsa_size_t size;
+  cdsa_size_t version;
 };
 
 // --- Node Allocators ---
@@ -114,7 +114,7 @@ static Node256 *alloc_node256() {
 }
 
 static char *safe_strdup(const char *s) {
-  size_t len = strlen(s) + 1;
+  cdsa_size_t len = strlen(s) + 1;
   char *dup = CDSA_MALLOC(len);
   if (dup)
     memcpy(dup, s, len);
@@ -252,7 +252,7 @@ static void **find_child_node256(Node256 *n, uint8_t c) {
 
 // --- Teardown Helper ---
 
-static void free_node(void *node) {
+static void cdsa_free_node(void *node) {
   if (node == NULL)
     return;
 
@@ -267,7 +267,7 @@ static void free_node(void *node) {
   else if (header->type == NODE4) {
     Node4 *n = (Node4 *)node;
     for (uint16_t i = 0; i < n->num_children; i++) {
-      free_node(n->children[i]);
+      cdsa_free_node(n->children[i]);
     }
     CDSA_FREE(n);
   }
@@ -275,7 +275,7 @@ static void free_node(void *node) {
   else if (header->type == NODE16) {
     Node16 *n = (Node16 *)node;
     for (uint16_t i = 0; i < n->num_children; i++) {
-      free_node(n->children[i]);
+      cdsa_free_node(n->children[i]);
     }
     CDSA_FREE(n);
   }
@@ -285,7 +285,7 @@ static void free_node(void *node) {
     for (int i = 0; i < 256; i++) {
       uint8_t idx = n->child_index[i];
       if (idx != ART_EMPTY_SLOT) {
-        free_node(n->children[idx]);
+        cdsa_free_node(n->children[idx]);
       }
     }
 
@@ -296,7 +296,7 @@ static void free_node(void *node) {
     Node256 *n = (Node256 *)node;
     for (int i = 0; i < 256; i++) {
       if (n->children[i] != NULL) {
-        free_node(n->children[i]);
+        cdsa_free_node(n->children[i]);
       }
     }
     CDSA_FREE(n);
@@ -515,7 +515,7 @@ static void remove_child_node256(Node256 *n, uint8_t c) {
 // --- 3. Internal Engine: Recursive Deletion & Memory Merging ---
 
 static void *recursive_delete(void *node, const char *key, int depth,
-                              bool *deleted, ArtTree *tree) {
+                              bool *deleted, cdsa_art_tree *tree) {
   if (node == NULL)
     return NULL;
 
@@ -671,8 +671,8 @@ static ArtLeaf *find_minimum_leaf(void *node) {
 
 // --- LifeCycle ---
 
-ArtTree *create_art() {
-  ArtTree *tree = CDSA_MALLOC(sizeof(ArtTree));
+cdsa_art_tree *cdsa_create_art() {
+  cdsa_art_tree *tree = CDSA_MALLOC(sizeof(cdsa_art_tree));
   if (tree == NULL) {
     return NULL;
   }
@@ -681,20 +681,20 @@ ArtTree *create_art() {
   return tree;
 }
 
-void free_art(ArtTree *tree) {
+void cdsa_free_art(cdsa_art_tree *tree) {
   if (tree == NULL)
     return;
-  free_node(tree->root);
+  cdsa_free_node(tree->root);
   CDSA_FREE(tree);
 }
 
-size_t size_art(ArtTree *tree) {
+cdsa_size_t cdsa_size_art(cdsa_art_tree *tree) {
   if (tree == NULL)
     return 0;
   return tree->size;
 }
 
-void print_art(ArtTree *tree) {
+void print_art(cdsa_art_tree *tree) {
   if (tree == NULL)
     return;
   printf("\n=== 🌲 ART TREE DUMP (Total Keys: %zu) ===\n", tree->size);
@@ -707,7 +707,7 @@ void print_art(ArtTree *tree) {
   printf("==========================================\n\n");
 }
 
-CDSA_STATUS delete_art(ArtTree *tree, const char *key) {
+CDSA_STATUS cdsa_delete_art(cdsa_art_tree *tree, const char *key) {
   if (tree == NULL || key == NULL)
     return CDSA_ERR_INVALID;
 
@@ -721,7 +721,7 @@ CDSA_STATUS delete_art(ArtTree *tree, const char *key) {
 }
 
 // --- Main Engine: Insert ---
-static CDSA_STATUS _insert_art_internal(ArtTree *tree, const char *key,
+static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
                                         void *value) {
   if (tree == NULL || key == NULL) {
     return CDSA_ERR_INVALID;
@@ -856,13 +856,13 @@ static CDSA_STATUS _insert_art_internal(ArtTree *tree, const char *key,
     }
 
     uint8_t c = key_bytes[depth];
-    void **next_ptr = NULL;
+    void **cdsa_next_ptr = NULL;
 
     if (header->type == NODE4) {
       Node4 *n = (Node4 *)*current_ptr;
-      next_ptr = find_child_node4(n, c);
+      cdsa_next_ptr = find_child_node4(n, c);
 
-      if (next_ptr == NULL) {
+      if (cdsa_next_ptr == NULL) {
         if (n->num_children < 4) {
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
@@ -892,9 +892,9 @@ static CDSA_STATUS _insert_art_internal(ArtTree *tree, const char *key,
 
     else if (header->type == NODE16) {
       Node16 *n = (Node16 *)*current_ptr;
-      next_ptr = find_child_node16(n, c);
+      cdsa_next_ptr = find_child_node16(n, c);
 
-      if (next_ptr == NULL) {
+      if (cdsa_next_ptr == NULL) {
         if (n->num_children < 16) {
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
@@ -926,9 +926,9 @@ static CDSA_STATUS _insert_art_internal(ArtTree *tree, const char *key,
 
     else if (header->type == NODE48) {
       Node48 *n = (Node48 *)*current_ptr;
-      next_ptr = find_child_node48(n, c);
+      cdsa_next_ptr = find_child_node48(n, c);
 
-      if (next_ptr == NULL) {
+      if (cdsa_next_ptr == NULL) {
         if (n->num_children < 48) {
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
@@ -958,27 +958,27 @@ static CDSA_STATUS _insert_art_internal(ArtTree *tree, const char *key,
 
     else if (header->type == NODE256) {
       Node256 *n = (Node256 *)*current_ptr;
-      next_ptr = find_child_node256(n, c);
+      cdsa_next_ptr = find_child_node256(n, c);
 
-      if (*next_ptr == NULL) {
+      if (*cdsa_next_ptr == NULL) {
         ArtLeaf *new_leaf = alloc_leaf(key, value);
         if (new_leaf == NULL)
           return CDSA_ERR_OOM;
-        *next_ptr = new_leaf;
+        *cdsa_next_ptr = new_leaf;
         n->num_children++;
         tree->size++;
         return CDSA_OK;
       }
     }
 
-    current_ptr = next_ptr;
+    current_ptr = cdsa_next_ptr;
     depth++;
   }
 
   return CDSA_ERR_INVALID;
 }
 
-CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value) {
+CDSA_STATUS cdsa_insert_art(cdsa_art_tree *tree, const char *key, void *value) {
   CDSA_STATUS status = _insert_art_internal(tree, key, value);
 
   if (status == CDSA_OK) {
@@ -988,7 +988,7 @@ CDSA_STATUS insert_art(ArtTree *tree, const char *key, void *value) {
   return status;
 }
 // --- Main Engine: Search ---
-void *search_art(ArtTree *tree, const char *key) {
+void *cdsa_search_art(cdsa_art_tree *tree, const char *key) {
   if (tree == NULL || key == NULL || tree->root == NULL)
     return NULL;
 
@@ -1077,17 +1077,17 @@ typedef struct {
   int child_idx;
 } ArtIterFrame;
 
-struct ArtIterator {
-  ArtTree *tree;
+struct cdsa_art_iterator {
+  cdsa_art_tree *tree;
   ArtIterFrame stack[ART_MAX_DEPTH];
   int top;
-  size_t snapshot_version;
-  void *next_value; // NEW: The pre-fetch cache
+  cdsa_size_t snapshot_version;
+  void *cdsa_next_value; // NEW: The pre-fetch cache
 };
 
 // Internal engine that drives the DFS until it hits the next leaf
-static void advance_art_iterator(ArtIterator *iter) {
-  iter->next_value = NULL; // Reset cache
+static void advance_art_iterator(cdsa_art_iterator *iter) {
+  iter->cdsa_next_value = NULL; // Reset cache
 
   while (iter->top >= 0) {
     ArtIterFrame *frame = &iter->stack[iter->top];
@@ -1096,25 +1096,25 @@ static void advance_art_iterator(ArtIterator *iter) {
     // 1. If we hit a leaf, cache its value and pop it off the stack
     if (header->type == LEAF_NODE) {
       ArtLeaf *leaf = (ArtLeaf *)frame->node;
-      iter->next_value = leaf->value;
+      iter->cdsa_next_value = leaf->value;
       iter->top--;
       return; // We found the next value, pause the engine!
     }
 
     // 2. Otherwise, find the next unvisited child
-    void *next_child = NULL;
+    void *cdsa_next_child = NULL;
     int current_idx = frame->child_idx;
 
     if (header->type == NODE4) {
       Node4 *n = (Node4 *)frame->node;
       if (current_idx < n->num_children) {
-        next_child = n->children[current_idx];
+        cdsa_next_child = n->children[current_idx];
         frame->child_idx++;
       }
     } else if (header->type == NODE16) {
       Node16 *n = (Node16 *)frame->node;
       if (current_idx < n->num_children) {
-        next_child = n->children[current_idx];
+        cdsa_next_child = n->children[current_idx];
         frame->child_idx++;
       }
     } else if (header->type == NODE48) {
@@ -1124,7 +1124,7 @@ static void advance_art_iterator(ArtIterator *iter) {
         current_idx++;
       }
       if (current_idx < 256) {
-        next_child = n->children[n->child_index[current_idx]];
+        cdsa_next_child = n->children[n->child_index[current_idx]];
         frame->child_idx = current_idx + 1;
       } else {
         frame->child_idx = 256;
@@ -1135,7 +1135,7 @@ static void advance_art_iterator(ArtIterator *iter) {
         current_idx++;
       }
       if (current_idx < 256) {
-        next_child = n->children[current_idx];
+        cdsa_next_child = n->children[current_idx];
         frame->child_idx = current_idx + 1;
       } else {
         frame->child_idx = 256;
@@ -1143,9 +1143,9 @@ static void advance_art_iterator(ArtIterator *iter) {
     }
 
     // 3. Process the routing decision
-    if (next_child != NULL) {
+    if (cdsa_next_child != NULL) {
       iter->top++;
-      iter->stack[iter->top].node = next_child;
+      iter->stack[iter->top].node = cdsa_next_child;
       iter->stack[iter->top].child_idx = 0;
     } else {
       iter->top--; // Exhausted children, backtrack!
@@ -1153,18 +1153,18 @@ static void advance_art_iterator(ArtIterator *iter) {
   }
 }
 
-ArtIterator *create_art_iterator(ArtTree *tree) {
+cdsa_art_iterator *cdsa_create_art_iterator(cdsa_art_tree *tree) {
   if (tree == NULL)
     return NULL;
 
-  ArtIterator *iter = CDSA_MALLOC(sizeof(ArtIterator));
+  cdsa_art_iterator *iter = CDSA_MALLOC(sizeof(cdsa_art_iterator));
   if (iter == NULL)
     return NULL;
 
   iter->tree = tree;
   iter->snapshot_version = tree->version;
   iter->top = -1;
-  iter->next_value = NULL;
+  iter->cdsa_next_value = NULL;
 
   // Seed the stack and immediately pre-fetch the very first leaf
   if (tree->root != NULL) {
@@ -1177,7 +1177,7 @@ ArtIterator *create_art_iterator(ArtTree *tree) {
   return iter;
 }
 
-bool has_next_art(ArtIterator *iter) {
+bool cdsa_has_next_art(cdsa_art_iterator *iter) {
   if (iter == NULL || iter->tree == NULL)
     return false;
 
@@ -1186,10 +1186,10 @@ bool has_next_art(ArtIterator *iter) {
     return false;
 
   // Safely check if the pre-fetch engine found a leaf
-  return iter->next_value != NULL;
+  return iter->cdsa_next_value != NULL;
 }
 
-CDSA_STATUS next_art(ArtIterator *iter, void **out_value) {
+CDSA_STATUS cdsa_next_art(cdsa_art_iterator *iter, void **out_value) {
   if (iter == NULL || out_value == NULL)
     return CDSA_ERR_INVALID;
 
@@ -1198,12 +1198,12 @@ CDSA_STATUS next_art(ArtIterator *iter, void **out_value) {
     return CDSA_ERR_ITER_INVALIDATED;
   }
 
-  if (iter->next_value == NULL) {
+  if (iter->cdsa_next_value == NULL) {
     return CDSA_ERR_NOT_FOUND;
   }
 
   // 1. Yield the cached value
-  *out_value = iter->next_value;
+  *out_value = iter->cdsa_next_value;
 
   // 2. Fire up the DFS engine to queue up the next leaf
   advance_art_iterator(iter);
@@ -1211,7 +1211,7 @@ CDSA_STATUS next_art(ArtIterator *iter, void **out_value) {
   return CDSA_OK;
 }
 
-void free_art_iterator(ArtIterator *iter) {
+void cdsa_free_art_iterator(cdsa_art_iterator *iter) {
   if (iter == NULL)
     return;
   CDSA_FREE(iter);

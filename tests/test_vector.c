@@ -2,22 +2,22 @@
 #include <stdio.h>
 
 int main() {
-  Vector *vec = create_vector(sizeof(int));
+  cdsa_vector *vec = cdsa_create_vector(sizeof(int));
 
   for (int i = 0; i < 10; i++) {
-    push_vector(vec, &i);
+    cdsa_push_vector(vec, &i);
   }
 
   for (int i = 0; i < 10; i++) {
     printf("%d\n", *(int *)get_vector(vec, i));
   }
 
-  printf("%d\n", *(int *)front_vector(vec));
-  printf("%d\n", *(int *)back_vector(vec));
+  printf("%d\n", *(int *)cdsa_front_vector(vec));
+  printf("%d\n", *(int *)cdsa_back_vector(vec));
 
-  printf("Size: %zu\n", size_vector(vec));
+  printf("Size: %zu\n", cdsa_size_vector(vec));
   printf("Capacity: %zu\n", capacity_vector(vec));
-  pop_vector(vec);
+  cdsa_pop_vector(vec);
 
   int *x = get_vector(vec, 999);
 
@@ -29,11 +29,11 @@ int main() {
   set_vector(vec, 2, &val);
   printf("%d\n", *(int *)get_vector(vec, 2));
 
-  printf("Before: %zu\n", size_vector(vec));
-  clear_vector(vec);
-  printf("After: %zu\n", size_vector(vec));
+  printf("Before: %zu\n", cdsa_size_vector(vec));
+  cdsa_clear_vector(vec);
+  printf("After: %zu\n", cdsa_size_vector(vec));
   printf("Capacity: %zu\n", capacity_vector(vec));
 
-  free_vector(vec);
+  cdsa_free_vector(vec);
   return 0;
 }

@@ -13,15 +13,15 @@ typedef struct Node {
   struct Node *next;
 } Node;
 
-struct LinkedList {
+struct cdsa_linkedlist {
   Node *head;
-  size_t size;
-  size_t elem_size;
-  size_t version;
+  cdsa_size_t size;
+  cdsa_size_t elem_size;
+  cdsa_size_t version;
 };
 
-LinkedList *create_linkedlist(size_t elem_size) {
-  LinkedList *list = CDSA_MALLOC(sizeof(LinkedList));
+cdsa_linkedlist *cdsa_create_linkedlist(cdsa_size_t elem_size) {
+  cdsa_linkedlist *list = CDSA_MALLOC(sizeof(cdsa_linkedlist));
   if (list == NULL)
     return NULL;
   list->head = NULL;
@@ -31,19 +31,19 @@ LinkedList *create_linkedlist(size_t elem_size) {
   return list;
 }
 
-size_t size_linkedlist(LinkedList *list) {
+cdsa_size_t cdsa_size_linkedlist(cdsa_linkedlist *list) {
   if (list == NULL)
     return 0;
   return list->size;
 }
 
-bool is_empty_linkedlist(LinkedList *list) {
+bool cdsa_is_empty_linkedlist(cdsa_linkedlist *list) {
   if (list == NULL)
     return true;
   return list->size == 0;
 }
 
-void free_linkedlist(LinkedList *list) {
+void cdsa_free_linkedlist(cdsa_linkedlist *list) {
   if (list == NULL)
     return;
   Node *current = list->head;
@@ -59,7 +59,7 @@ void free_linkedlist(LinkedList *list) {
   CDSA_FREE(list);
 }
 
-CDSA_STATUS push_front_linkedlist(LinkedList *list, void *value) {
+CDSA_STATUS cdsa_push_front_linkedlist(cdsa_linkedlist *list, void *value) {
   if (list == NULL || value == NULL)
     return CDSA_ERR_INVALID;
 
@@ -82,7 +82,7 @@ CDSA_STATUS push_front_linkedlist(LinkedList *list, void *value) {
   return CDSA_OK;
 }
 
-CDSA_STATUS pop_front_linkedlist(LinkedList *list) {
+CDSA_STATUS cdsa_pop_front_linkedlist(cdsa_linkedlist *list) {
   if (list == NULL)
     return CDSA_ERR_INVALID;
 
@@ -99,7 +99,7 @@ CDSA_STATUS pop_front_linkedlist(LinkedList *list) {
   return CDSA_OK;
 }
 
-void clear_linkedlist(LinkedList *list) {
+void cdsa_clear_linkedlist(cdsa_linkedlist *list) {
   if (list == NULL)
     return;
   Node *current = list->head;
@@ -117,13 +117,13 @@ void clear_linkedlist(LinkedList *list) {
   list->version++;
 }
 
-void *front_linkedlist(LinkedList *list) {
+void *cdsa_front_linkedlist(cdsa_linkedlist *list) {
   if (list == NULL || list->head == NULL)
     return NULL;
   return list->head->data;
 }
 
-void print_linkedlist(LinkedList *list, void (*print_fn)(void *)) {
+void print_linkedlist(cdsa_linkedlist *list, void (*print_fn)(void *)) {
   if (list == NULL || print_fn == NULL)
     return;
   Node *current = list->head;
@@ -138,17 +138,17 @@ void print_linkedlist(LinkedList *list, void (*print_fn)(void *)) {
 
 // --- Iterator Implementation ---
 
-struct LinkedListIterator {
-  LinkedList *list;
+struct cdsa_linkedlist_iterator {
+  cdsa_linkedlist *list;
   Node *current_node;      // Tracks exactly where we are in the chain
-  size_t snapshot_version; // Safety lock against mid-walk modifications
+  cdsa_size_t snapshot_version; // Safety lock against mid-walk modifications
 };
 
-LinkedListIterator *create_linkedlist_iterator(LinkedList *list) {
+cdsa_linkedlist_iterator *cdsa_create_linkedlist_iterator(cdsa_linkedlist *list) {
   if (list == NULL)
     return NULL;
 
-  LinkedListIterator *iter = CDSA_MALLOC(sizeof(LinkedListIterator));
+  cdsa_linkedlist_iterator *iter = CDSA_MALLOC(sizeof(cdsa_linkedlist_iterator));
   if (iter == NULL)
     return NULL;
 
@@ -159,7 +159,7 @@ LinkedListIterator *create_linkedlist_iterator(LinkedList *list) {
   return iter;
 }
 
-bool has_next_linkedlist(LinkedListIterator *iter) {
+bool cdsa_has_next_linkedlist(cdsa_linkedlist_iterator *iter) {
   if (iter == NULL || iter->list == NULL)
     return false;
 
@@ -171,7 +171,7 @@ bool has_next_linkedlist(LinkedListIterator *iter) {
   return iter->current_node != NULL;
 }
 
-CDSA_STATUS next_linkedlist(LinkedListIterator *iter, void **out_value) {
+CDSA_STATUS cdsa_next_linkedlist(cdsa_linkedlist_iterator *iter, void **out_value) {
   if (iter == NULL || out_value == NULL)
     return CDSA_ERR_INVALID;
 
@@ -180,7 +180,7 @@ CDSA_STATUS next_linkedlist(LinkedListIterator *iter, void **out_value) {
     return CDSA_ERR_ITER_INVALIDATED;
   }
 
-  if (!has_next_linkedlist(iter)) {
+  if (!cdsa_has_next_linkedlist(iter)) {
     return CDSA_ERR_NOT_FOUND;
   }
 
@@ -193,7 +193,7 @@ CDSA_STATUS next_linkedlist(LinkedListIterator *iter, void **out_value) {
   return CDSA_OK;
 }
 
-void free_linkedlist_iterator(LinkedListIterator *iter) {
+void cdsa_free_linkedlist_iterator(cdsa_linkedlist_iterator *iter) {
   if (iter == NULL)
     return;
   CDSA_FREE(iter);
