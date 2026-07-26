@@ -11,7 +11,7 @@ struct Stack {
   cdsa_vector *vec;
 };
 
-Stack *cdsa_create_stack(cdsa_size_t elem_size) {
+Stack *cdsa_create_stack(size_t elem_size) {
   Stack *stack = CDSA_MALLOC(sizeof(Stack));
 
   if (stack == NULL) {
@@ -56,7 +56,7 @@ void *top_stack(Stack *stack) {
   return cdsa_back_vector(stack->vec);
 }
 
-cdsa_size_t cdsa_size_stack(Stack *stack) {
+size_t cdsa_size_stack(Stack *stack) {
   if (stack == NULL)
     return 0;
   return cdsa_size_vector(stack->vec);

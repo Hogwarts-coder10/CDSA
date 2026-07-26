@@ -7,7 +7,7 @@
 
 typedef struct HashMap HashMap;
 
-HashMap *cdsa_create_hashmap(cdsa_size_t capacity);
+HashMap *cdsa_create_hashmap(size_t capacity);
 void cdsa_free_hashmap(HashMap *map);
 
 /**
@@ -26,7 +26,7 @@ bool contains_hashmap(HashMap *map, const char *key);
 CDSA_STATUS remove_hashmap(HashMap *map, const char *key);
 void print_hashmap(HashMap *map);
 CDSA_STATUS resize_hashmap(HashMap *map);
-cdsa_size_t cdsa_size_hashmap(HashMap *map);
+size_t cdsa_size_hashmap(HashMap *map);
 
 // --- Iterator API ---
 

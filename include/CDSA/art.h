@@ -47,7 +47,7 @@ CDSA_STATUS cdsa_insert_art(cdsa_art_tree *tree, const char *key, void *value);
  * of this memory and should not free it unless they are actively removing it
  * from the tree.
  */
-void *cdsa_search_art(cdsa_art_tree *tree, const char *key);
+void *cdsa_search_art(const cdsa_art_tree *tree, const char *key);
 
 void print_art(cdsa_art_tree *tree);
 
@@ -59,7 +59,7 @@ void print_art(cdsa_art_tree *tree);
  * the value was dynamically allocated.
  */
 CDSA_STATUS cdsa_delete_art(cdsa_art_tree *tree, const char *key);
-cdsa_size_t cdsa_size_art(cdsa_art_tree *tree);
+size_t cdsa_size_art(const cdsa_art_tree *tree);
 
 // --- Iterator API ---
 
@@ -69,7 +69,7 @@ typedef struct cdsa_art_iterator cdsa_art_iterator;
  * @brief Creates a new iterator for the Adaptive Radix Tree.
  * @warning The caller must free the iterator using cdsa_free_art_iterator.
  */
-cdsa_art_iterator *cdsa_create_art_iterator(cdsa_art_tree *tree);
+cdsa_art_iterator *cdsa_create_art_iterator(const cdsa_art_tree *tree);
 
 /**
  * @brief Checks if there are more key-value pairs to read.

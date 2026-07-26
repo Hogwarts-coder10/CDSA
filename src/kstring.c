@@ -11,8 +11,8 @@
 
 struct KString {
   char *data;
-  cdsa_size_t size;
-  cdsa_size_t capacity;
+  size_t size;
+  size_t capacity;
 };
 
 KString *cdsa_create_kstring(void) {
@@ -40,7 +40,7 @@ void cdsa_free_kstring(KString *str) {
   CDSA_FREE(str);
 }
 
-cdsa_size_t cdsa_size_kstring(KString *str) {
+size_t cdsa_size_kstring(KString *str) {
   if (str == NULL)
     return 0;
   return str->size;
@@ -52,7 +52,7 @@ const char *c_str_kstring(KString *str) {
   return str->data;
 }
 
-cdsa_size_t capacity_kstring(KString *str) {
+size_t capacity_kstring(KString *str) {
   if (str == NULL)
     return 0;
   return str->capacity;
@@ -75,8 +75,8 @@ CDSA_STATUS append_kstring(KString *str, const char *text) {
   if (str == NULL || text == NULL)
     return CDSA_ERR_INVALID;
 
-  cdsa_size_t text_len = strlen(text);
-  cdsa_size_t required_space = str->size + text_len + 1;
+  size_t text_len = strlen(text);
+  size_t required_space = str->size + text_len + 1;
 
   if (required_space > str->capacity) {
     while (str->capacity < required_space) {

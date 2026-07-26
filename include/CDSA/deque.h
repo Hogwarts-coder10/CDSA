@@ -8,7 +8,7 @@
 typedef struct cdsa_deque cdsa_deque;
 
 // -- Core LifeCycle
-cdsa_deque *cdsa_create_deque(cdsa_size_t capacity, cdsa_size_t elem_size);
+cdsa_deque *cdsa_create_deque(size_t capacity, size_t elem_size);
 void cdsa_free_deque(cdsa_deque *cdsa_dequeue);
 
 // --- Front Operations ---
@@ -24,23 +24,23 @@ void cdsa_free_deque(cdsa_deque *cdsa_dequeue);
  */
 CDSA_STATUS cdsa_push_front_deque(cdsa_deque *deque, void *elem);
 CDSA_STATUS cdsa_pop_front_deque(cdsa_deque *deque);
-void *cdsa_front_deque(cdsa_deque *deque);
+void *cdsa_front_deque(const cdsa_deque *deque);
 
 // --- Back Operations ---
 CDSA_STATUS cdsa_push_back_deque(cdsa_deque *deque, void *elem);
 CDSA_STATUS cdsa_pop_back_deque(cdsa_deque *deque);
-void *cdsa_back_deque(cdsa_deque *deque);
+void *cdsa_back_deque(const cdsa_deque *deque);
 
 // --- Utilities ---
-cdsa_size_t cdsa_size_deque(cdsa_deque *deque);
-bool cdsa_is_empty_deque(cdsa_deque *deque);
-bool cdsa_is_full_deque(cdsa_deque *deque);
+size_t cdsa_size_deque(const cdsa_deque *deque);
+bool cdsa_is_empty_deque(const cdsa_deque *deque);
+bool cdsa_is_full_deque(const cdsa_deque *deque);
 
 // --- Iterator API ---
 
 typedef struct cdsa_deque_iterator cdsa_deque_iterator;
 
-cdsa_deque_iterator *cdsa_create_deque_iterator(cdsa_deque *d);
+cdsa_deque_iterator *cdsa_create_deque_iterator(const cdsa_deque *d);
 bool cdsa_has_next_deque(cdsa_deque_iterator *iter);
 CDSA_STATUS cdsa_next_deque(cdsa_deque_iterator *iter, void **out_value);
 void cdsa_free_deque_iterator(cdsa_deque_iterator *iter);

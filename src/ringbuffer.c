@@ -8,17 +8,17 @@
 
 struct cdsa_ringbuffer {
   void *data;
-  cdsa_size_t head;
-  cdsa_size_t tail;
-  cdsa_size_t size;
-  cdsa_size_t capacity;
-  cdsa_size_t elem_size;
-  cdsa_size_t version;
+  size_t head;
+  size_t tail;
+  size_t size;
+  size_t capacity;
+  size_t elem_size;
+  size_t version;
 };
 
 // --- Core Lifecycle ---
 
-cdsa_ringbuffer *cdsa_create_ringbuffer(cdsa_size_t capacity, cdsa_size_t elem_size) {
+cdsa_ringbuffer *cdsa_create_ringbuffer(size_t capacity, size_t elem_size) {
   cdsa_ringbuffer *rb = CDSA_MALLOC(sizeof(cdsa_ringbuffer));
   if (rb == NULL) {
     return NULL;
@@ -50,19 +50,19 @@ void cdsa_free_ringbuffer(cdsa_ringbuffer *rb) {
 
 // --- Utilities ---
 
-cdsa_size_t cdsa_size_ringbuffer(cdsa_ringbuffer *rb) {
+size_t cdsa_size_ringbuffer(const cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return 0;
   return rb->size;
 }
 
-bool cdsa_is_empty_ringbuffer(cdsa_ringbuffer *rb) {
+bool cdsa_is_empty_ringbuffer(const cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return true;
   return rb->size == 0;
 }
 
-bool cdsa_is_full_ringbuffer(cdsa_ringbuffer *rb) {
+bool cdsa_is_full_ringbuffer(const cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return false;
   return rb->size == rb->capacity;
@@ -108,7 +108,7 @@ CDSA_STATUS cdsa_pop_front_ringbuffer(cdsa_ringbuffer *rb) {
   return CDSA_OK;
 }
 
-void *cdsa_front_ringbuffer(cdsa_ringbuffer *rb) {
+void *cdsa_front_ringbuffer(const cdsa_ringbuffer *rb) {
   if (rb == NULL || cdsa_is_empty_ringbuffer(rb)) {
     return NULL;
   }
@@ -155,29 +155,31 @@ CDSA_STATUS cdsa_pop_back_ringbuffer(cdsa_ringbuffer *rb) {
   return CDSA_OK;
 }
 
-void *cdsa_back_ringbuffer(cdsa_ringbuffer *rb) {
+void *cdsa_back_ringbuffer(const cdsa_ringbuffer *rb) {
   if (rb == NULL || cdsa_is_empty_ringbuffer(rb)) {
     return NULL;
   }
 
   // The "back" element is always one step behind the current tail
-  cdsa_size_t last_idx = (rb->tail + rb->capacity - 1) % rb->capacity;
+  size_t last_idx = (rb->tail + rb->capacity - 1) % rb->capacity;
   return (char *)rb->data + (last_idx * rb->elem_size);
 }
 
 // --- Iterator Implementation ---
 
 struct cdsa_ringbuffer_iterator {
-  cdsa_ringbuffer *rb;
-  cdsa_size_t progress;         // Tracks logical steps: from 0 to rb->size - 1
-  cdsa_size_t snapshot_version; // Safety lock against mid-walk modifications
+  const cdsa_ringbuffer *rb;
+  size_t progress;         // Tracks logical steps: from 0 to rb->size - 1
+  size_t snapshot_version; // Safety lock against mid-walk modifications
 };
 
-cdsa_ringbuffer_iterator *cdsa_create_ringbuffer_iterator(cdsa_ringbuffer *rb) {
+cdsa_ringbuffer_iterator *
+cdsa_create_ringbuffer_iterator(const cdsa_ringbuffer *rb) {
   if (rb == NULL)
     return NULL;
 
-  cdsa_ringbuffer_iterator *iter = CDSA_MALLOC(sizeof(cdsa_ringbuffer_iterator));
+  cdsa_ringbuffer_iterator *iter =
+      CDSA_MALLOC(sizeof(cdsa_ringbuffer_iterator));
   if (iter == NULL)
     return NULL;
 
@@ -200,7 +202,8 @@ bool cdsa_has_next_ringbuffer(cdsa_ringbuffer_iterator *iter) {
   return iter->progress < iter->rb->size;
 }
 
-CDSA_STATUS cdsa_next_ringbuffer(cdsa_ringbuffer_iterator *iter, void **out_value) {
+CDSA_STATUS cdsa_next_ringbuffer(cdsa_ringbuffer_iterator *iter,
+                                 void **out_value) {
   if (iter == NULL || out_value == NULL)
     return CDSA_ERR_INVALID;
 
@@ -214,7 +217,7 @@ CDSA_STATUS cdsa_next_ringbuffer(cdsa_ringbuffer_iterator *iter, void **out_valu
   }
 
   // Calculate the circular array index based on current progress
-  cdsa_size_t physical_index =
+  size_t physical_index =
       (iter->rb->head + iter->progress) % iter->rb->capacity;
 
   // Point directly to the element at that index

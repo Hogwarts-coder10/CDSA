@@ -15,12 +15,12 @@ typedef struct Node {
 
 struct cdsa_linkedlist {
   Node *head;
-  cdsa_size_t size;
-  cdsa_size_t elem_size;
-  cdsa_size_t version;
+  size_t size;
+  size_t elem_size;
+  size_t version;
 };
 
-cdsa_linkedlist *cdsa_create_linkedlist(cdsa_size_t elem_size) {
+cdsa_linkedlist *cdsa_create_linkedlist(size_t elem_size) {
   cdsa_linkedlist *list = CDSA_MALLOC(sizeof(cdsa_linkedlist));
   if (list == NULL)
     return NULL;
@@ -31,13 +31,13 @@ cdsa_linkedlist *cdsa_create_linkedlist(cdsa_size_t elem_size) {
   return list;
 }
 
-cdsa_size_t cdsa_size_linkedlist(cdsa_linkedlist *list) {
+size_t cdsa_size_linkedlist(const cdsa_linkedlist *list) {
   if (list == NULL)
     return 0;
   return list->size;
 }
 
-bool cdsa_is_empty_linkedlist(cdsa_linkedlist *list) {
+bool cdsa_is_empty_linkedlist(const cdsa_linkedlist *list) {
   if (list == NULL)
     return true;
   return list->size == 0;
@@ -117,7 +117,7 @@ void cdsa_clear_linkedlist(cdsa_linkedlist *list) {
   list->version++;
 }
 
-void *cdsa_front_linkedlist(cdsa_linkedlist *list) {
+void *cdsa_front_linkedlist(const cdsa_linkedlist *list) {
   if (list == NULL || list->head == NULL)
     return NULL;
   return list->head->data;
@@ -139,16 +139,18 @@ void print_linkedlist(cdsa_linkedlist *list, void (*print_fn)(void *)) {
 // --- Iterator Implementation ---
 
 struct cdsa_linkedlist_iterator {
-  cdsa_linkedlist *list;
+  const cdsa_linkedlist *list;
   Node *current_node;      // Tracks exactly where we are in the chain
-  cdsa_size_t snapshot_version; // Safety lock against mid-walk modifications
+  size_t snapshot_version; // Safety lock against mid-walk modifications
 };
 
-cdsa_linkedlist_iterator *cdsa_create_linkedlist_iterator(cdsa_linkedlist *list) {
+cdsa_linkedlist_iterator *
+cdsa_create_linkedlist_iterator(const cdsa_linkedlist *list) {
   if (list == NULL)
     return NULL;
 
-  cdsa_linkedlist_iterator *iter = CDSA_MALLOC(sizeof(cdsa_linkedlist_iterator));
+  cdsa_linkedlist_iterator *iter =
+      CDSA_MALLOC(sizeof(cdsa_linkedlist_iterator));
   if (iter == NULL)
     return NULL;
 
@@ -171,7 +173,8 @@ bool cdsa_has_next_linkedlist(cdsa_linkedlist_iterator *iter) {
   return iter->current_node != NULL;
 }
 
-CDSA_STATUS cdsa_next_linkedlist(cdsa_linkedlist_iterator *iter, void **out_value) {
+CDSA_STATUS cdsa_next_linkedlist(cdsa_linkedlist_iterator *iter,
+                                 void **out_value) {
   if (iter == NULL || out_value == NULL)
     return CDSA_ERR_INVALID;
 

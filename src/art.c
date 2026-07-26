@@ -63,8 +63,8 @@ struct ArtLeaf {
 
 struct cdsa_art_tree {
   void *root;
-  cdsa_size_t size;
-  cdsa_size_t version;
+  size_t size;
+  size_t version;
 };
 
 // --- Node Allocators ---
@@ -114,7 +114,7 @@ static Node256 *alloc_node256() {
 }
 
 static char *safe_strdup(const char *s) {
-  cdsa_size_t len = strlen(s) + 1;
+  size_t len = strlen(s) + 1;
   char *dup = CDSA_MALLOC(len);
   if (dup)
     memcpy(dup, s, len);
@@ -688,7 +688,7 @@ void cdsa_free_art(cdsa_art_tree *tree) {
   CDSA_FREE(tree);
 }
 
-cdsa_size_t cdsa_size_art(cdsa_art_tree *tree) {
+size_t cdsa_size_art(const cdsa_art_tree *tree) {
   if (tree == NULL)
     return 0;
   return tree->size;
@@ -988,7 +988,7 @@ CDSA_STATUS cdsa_insert_art(cdsa_art_tree *tree, const char *key, void *value) {
   return status;
 }
 // --- Main Engine: Search ---
-void *cdsa_search_art(cdsa_art_tree *tree, const char *key) {
+void *cdsa_search_art(const cdsa_art_tree *tree, const char *key) {
   if (tree == NULL || key == NULL || tree->root == NULL)
     return NULL;
 
@@ -1078,10 +1078,10 @@ typedef struct {
 } ArtIterFrame;
 
 struct cdsa_art_iterator {
-  cdsa_art_tree *tree;
+  const cdsa_art_tree *tree;
   ArtIterFrame stack[ART_MAX_DEPTH];
   int top;
-  cdsa_size_t snapshot_version;
+  size_t snapshot_version;
   void *cdsa_next_value; // NEW: The pre-fetch cache
 };
 
@@ -1153,7 +1153,7 @@ static void advance_art_iterator(cdsa_art_iterator *iter) {
   }
 }
 
-cdsa_art_iterator *cdsa_create_art_iterator(cdsa_art_tree *tree) {
+cdsa_art_iterator *cdsa_create_art_iterator(const cdsa_art_tree *tree) {
   if (tree == NULL)
     return NULL;
 

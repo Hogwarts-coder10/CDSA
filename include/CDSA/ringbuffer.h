@@ -7,7 +7,7 @@
 
 typedef struct cdsa_ringbuffer cdsa_ringbuffer;
 
-cdsa_ringbuffer *cdsa_create_ringbuffer(cdsa_size_t capacity, cdsa_size_t elem_size);
+cdsa_ringbuffer *cdsa_create_ringbuffer(size_t capacity, size_t elem_size);
 void cdsa_free_ringbuffer(cdsa_ringbuffer *rb);
 
 // --- cdsa_queue Operations (FIFO) ---
@@ -22,17 +22,17 @@ void cdsa_free_ringbuffer(cdsa_ringbuffer *rb);
  */
 CDSA_STATUS cdsa_push_back_ringbuffer(cdsa_ringbuffer *rb, void *elem);
 CDSA_STATUS cdsa_pop_front_ringbuffer(cdsa_ringbuffer *rb);
-void *cdsa_front_ringbuffer(cdsa_ringbuffer *rb);
+void *cdsa_front_ringbuffer(const cdsa_ringbuffer *rb);
 
 // --- cdsa_deque Operations (Double-Ended) ---
 CDSA_STATUS cdsa_push_front_ringbuffer(cdsa_ringbuffer *rb, void *elem);
 CDSA_STATUS cdsa_pop_back_ringbuffer(cdsa_ringbuffer *rb);
-void *cdsa_back_ringbuffer(cdsa_ringbuffer *rb);
+void *cdsa_back_ringbuffer(const cdsa_ringbuffer *rb);
 
 // --- Utilities ---
-cdsa_size_t cdsa_size_ringbuffer(cdsa_ringbuffer *rb);
-bool cdsa_is_empty_ringbuffer(cdsa_ringbuffer *rb);
-bool cdsa_is_full_ringbuffer(cdsa_ringbuffer *rb);
+size_t cdsa_size_ringbuffer(const cdsa_ringbuffer *rb);
+bool cdsa_is_empty_ringbuffer(const cdsa_ringbuffer *rb);
+bool cdsa_is_full_ringbuffer(const cdsa_ringbuffer *rb);
 
 // --- Iterator API ---
 
@@ -42,7 +42,7 @@ typedef struct cdsa_ringbuffer_iterator cdsa_ringbuffer_iterator;
  * @brief Creates a new iterator for the cdsa_ringbuffer.
  * @warning The caller must free the iterator using cdsa_free_ringbuffer_iterator.
  */
-cdsa_ringbuffer_iterator *cdsa_create_ringbuffer_iterator(cdsa_ringbuffer *rb);
+cdsa_ringbuffer_iterator *cdsa_create_ringbuffer_iterator(const cdsa_ringbuffer *rb);
 
 /**
  * @brief Checks if there are more elements to read.

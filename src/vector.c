@@ -9,13 +9,13 @@
 
 struct cdsa_vector {
   void *data;
-  cdsa_size_t size;
-  cdsa_size_t capacity;
-  cdsa_size_t elem_size;
-  cdsa_size_t version;
+  size_t size;
+  size_t capacity;
+  size_t elem_size;
+  size_t version;
 };
 
-cdsa_vector *cdsa_create_vector(cdsa_size_t elem_size) {
+cdsa_vector *cdsa_create_vector(size_t elem_size) {
   cdsa_vector *vec = CDSA_MALLOC(sizeof(cdsa_vector));
   if (vec == NULL)
     return NULL;
@@ -55,7 +55,7 @@ CDSA_STATUS cdsa_push_vector(cdsa_vector *vec, void *elem) {
   return CDSA_OK;
 }
 
-void *get_vector(cdsa_vector *vec, cdsa_size_t index) {
+void *get_vector(cdsa_vector *vec, size_t index) {
   if (vec == NULL || index >= vec->size)
     return NULL;
   return (char *)vec->data + (index * vec->elem_size);
@@ -82,31 +82,31 @@ CDSA_STATUS cdsa_pop_vector(cdsa_vector *vec) {
   return CDSA_OK;
 }
 
-void *cdsa_front_vector(cdsa_vector *vec) {
+void *cdsa_front_vector(const cdsa_vector *vec) {
   if (vec == NULL || vec->size == 0)
     return NULL;
   return vec->data;
 }
 
-void *cdsa_back_vector(cdsa_vector *vec) {
+void *cdsa_back_vector(const cdsa_vector *vec) {
   if (vec == NULL || vec->size == 0)
     return NULL;
   return (char *)vec->data + ((vec->size - 1) * vec->elem_size);
 }
 
-cdsa_size_t cdsa_size_vector(cdsa_vector *vec) {
+size_t cdsa_size_vector(const cdsa_vector *vec) {
   if (vec == NULL)
     return 0;
   return vec->size;
 }
 
-cdsa_size_t capacity_vector(cdsa_vector *vec) {
+size_t capacity_vector(cdsa_vector *vec) {
   if (vec == NULL)
     return 0;
   return vec->capacity;
 }
 
-CDSA_STATUS set_vector(cdsa_vector *vec, cdsa_size_t index, void *elem) {
+CDSA_STATUS set_vector(cdsa_vector *vec, size_t index, void *elem) {
   if (vec == NULL || elem == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -126,7 +126,7 @@ void cdsa_clear_vector(cdsa_vector *vec) {
   vec->size = 0;
 }
 
-bool cdsa_is_empty_vector(cdsa_vector *vec) {
+bool cdsa_is_empty_vector(const cdsa_vector *vec) {
   if (vec == NULL)
     return true;
   return vec->size == 0;
@@ -135,12 +135,12 @@ bool cdsa_is_empty_vector(cdsa_vector *vec) {
 // --- Iterator Implementation ---
 
 struct cdsa_vector_iterator {
-  cdsa_vector *vec;
-  cdsa_size_t current_index;
-  cdsa_size_t snapshot_version;
+  const cdsa_vector *vec;
+  size_t current_index;
+  size_t snapshot_version;
 };
 
-cdsa_vector_iterator *cdsa_create_vector_iterator(cdsa_vector *vec) {
+cdsa_vector_iterator *cdsa_create_vector_iterator(const cdsa_vector *vec) {
   if (vec == NULL)
     return NULL;
 

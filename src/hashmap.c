@@ -15,14 +15,14 @@ typedef struct {
 } HashEntry;
 
 struct HashMap {
-  cdsa_size_t capacity;
-  cdsa_size_t size;
-  cdsa_size_t occupied;
-  cdsa_size_t version;
+  size_t capacity;
+  size_t size;
+  size_t occupied;
+  size_t version;
   HashEntry *entries;
 };
 
-HashMap *cdsa_create_hashmap(cdsa_size_t capacity) {
+HashMap *cdsa_create_hashmap(size_t capacity) {
   HashMap *map = CDSA_MALLOC(sizeof(HashMap));
 
   if (map == NULL) {
@@ -55,14 +55,14 @@ void cdsa_free_hashmap(HashMap *map) {
   CDSA_FREE(map);
 }
 
-cdsa_size_t cdsa_size_hashmap(HashMap *map) {
+size_t cdsa_size_hashmap(HashMap *map) {
   if (map == NULL)
     return 0;
   return map->size;
 }
 
-static cdsa_size_t hash_function(const char *key, cdsa_size_t capacity) {
-  cdsa_size_t hash = 0;
+static size_t hash_function(const char *key, size_t capacity) {
+  size_t hash = 0;
   while (*key != '\0') {
     hash = (hash * 31) + *key;
     key++;
@@ -83,12 +83,12 @@ CDSA_STATUS insert_hashmap(HashMap *map, const char *key, void *value) {
     }
   }
 
-  cdsa_size_t index = hash_function(key, map->capacity);
-  cdsa_size_t first_tombstone = (cdsa_size_t)-1; // no tombstone seen yet
+  size_t index = hash_function(key, map->capacity);
+  size_t first_tombstone = (size_t)-1; // no tombstone seen yet
 
   while (map->entries[index].key != NULL) {
     if (map->entries[index].key == TOMBSTONE) {
-      if (first_tombstone == (cdsa_size_t)-1)
+      if (first_tombstone == (size_t)-1)
         first_tombstone = index; // remember first reusable slot
     } else if (strcmp(map->entries[index].key, key) == 0) {
       map->entries[index].value = value; // update existing key
@@ -98,7 +98,7 @@ CDSA_STATUS insert_hashmap(HashMap *map, const char *key, void *value) {
   }
 
   // Prefer reusing a tombstone slot over consuming a fresh NULL slot
-  if (first_tombstone != (cdsa_size_t)-1) {
+  if (first_tombstone != (size_t)-1) {
     index = first_tombstone;
     // occupied unchanged — tombstone was already counted
   } else {
@@ -116,7 +116,7 @@ void print_hashmap(HashMap *map) {
   if (map == NULL)
     return;
 
-  for (cdsa_size_t i = 0; i < map->capacity; i++) {
+  for (size_t i = 0; i < map->capacity; i++) {
     // THE SHIELD: Only print if it's not NULL and not a TOMBSTONE
     if (map->entries[i].key != NULL && map->entries[i].key != TOMBSTONE) {
       printf("[%zu] %s -> %d\n", i, map->entries[i].key,
@@ -129,7 +129,7 @@ void *get_hashmap(HashMap *map, const char *key) {
   if (map == NULL || key == NULL)
     return NULL;
 
-  cdsa_size_t index = hash_function(key, map->capacity);
+  size_t index = hash_function(key, map->capacity);
 
   // Probe until we hit an empty slot
   while (map->entries[index].key != NULL) {
@@ -159,10 +159,10 @@ CDSA_STATUS resize_hashmap(HashMap *map) {
   if (map == NULL)
     return CDSA_ERR_INVALID;
 
-  cdsa_size_t old_capacity = map->capacity;
+  size_t old_capacity = map->capacity;
   HashEntry *old_entries = map->entries;
 
-  cdsa_size_t new_capacity = map->capacity * 2;
+  size_t new_capacity = map->capacity * 2;
   HashEntry *new_entries = CDSA_CALLOC(new_capacity, sizeof(HashEntry));
 
   if (new_entries == NULL) {
@@ -176,7 +176,7 @@ CDSA_STATUS resize_hashmap(HashMap *map) {
   map->capacity = new_capacity;
   map->size = 0;
 
-  for (cdsa_size_t i = 0; i < old_capacity; i++) {
+  for (size_t i = 0; i < old_capacity; i++) {
     if (old_entries[i].key != NULL && old_entries[i].key != TOMBSTONE) {
       insert_hashmap(map, old_entries[i].key, old_entries[i].value);
     }
@@ -194,7 +194,7 @@ CDSA_STATUS remove_hashmap(HashMap *map, const char *key) {
   if (map == NULL || key == NULL)
     return CDSA_ERR_INVALID;
 
-  cdsa_size_t index = hash_function(key, map->capacity);
+  size_t index = hash_function(key, map->capacity);
 
   // Probe until we hit a completely empty slot
   while (map->entries[index].key != NULL) {
@@ -220,8 +220,8 @@ CDSA_STATUS remove_hashmap(HashMap *map, const char *key) {
 
 struct HashMapIterator {
   HashMap *map;
-  cdsa_size_t current_index;
-  cdsa_size_t snapshot_version;
+  size_t current_index;
+  size_t snapshot_version;
 };
 
 HashMapIterator *cdsa_create_hashmap_iterator(HashMap *map) {

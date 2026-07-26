@@ -15,7 +15,7 @@ void cdsa_free_skiplist(SkipList *sl);
 
 // Core operations
 
-cdsa_size_t cdsa_size_skiplist(SkipList *sl);
+size_t cdsa_size_skiplist(SkipList *sl);
 int level_skiplist(SkipList *sl);
 
 // Returns true if inserted, false if it failed (like out of memory)

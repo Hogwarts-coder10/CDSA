@@ -11,7 +11,7 @@ struct cdsa_deque {
 
 // --- Core Lifecycle ---
 
-cdsa_deque *cdsa_create_deque(cdsa_size_t capacity, cdsa_size_t elem_size) {
+cdsa_deque *cdsa_create_deque(size_t capacity, size_t elem_size) {
   cdsa_deque *deque = CDSA_MALLOC(sizeof(cdsa_deque));
 
   if (deque == NULL) {
@@ -50,7 +50,7 @@ CDSA_STATUS cdsa_pop_front_deque(cdsa_deque *deque) {
   return cdsa_pop_front_ringbuffer(deque->rb);
 }
 
-void *cdsa_front_deque(cdsa_deque *deque) {
+void *cdsa_front_deque(const cdsa_deque *deque) {
   if (deque == NULL)
     return NULL;
   return cdsa_front_ringbuffer(deque->rb);
@@ -72,7 +72,7 @@ CDSA_STATUS cdsa_pop_back_deque(cdsa_deque *deque) {
   return cdsa_pop_back_ringbuffer(deque->rb);
 }
 
-void *cdsa_back_deque(cdsa_deque *deque) {
+void *cdsa_back_deque(const cdsa_deque *deque) {
   if (deque == NULL)
     return NULL;
   return cdsa_back_ringbuffer(deque->rb);
@@ -80,19 +80,19 @@ void *cdsa_back_deque(cdsa_deque *deque) {
 
 // --- Utilities ---
 
-cdsa_size_t cdsa_size_deque(cdsa_deque *deque) {
+size_t cdsa_size_deque(const cdsa_deque *deque) {
   if (deque == NULL)
     return 0;
   return cdsa_size_ringbuffer(deque->rb);
 }
 
-bool cdsa_is_empty_deque(cdsa_deque *deque) {
+bool cdsa_is_empty_deque(const cdsa_deque *deque) {
   if (deque == NULL)
     return true;
   return cdsa_is_empty_ringbuffer(deque->rb);
 }
 
-bool cdsa_is_full_deque(cdsa_deque *deque) {
+bool cdsa_is_full_deque(const cdsa_deque *deque) {
   if (deque == NULL)
     return false;
   return cdsa_is_full_ringbuffer(deque->rb);
@@ -100,7 +100,7 @@ bool cdsa_is_full_deque(cdsa_deque *deque) {
 
 // --- Iterator Implementation ---
 
-cdsa_deque_iterator *cdsa_create_deque_iterator(cdsa_deque *d) {
+cdsa_deque_iterator *cdsa_create_deque_iterator(const cdsa_deque *d) {
   if (d == NULL)
     return NULL;
   return (cdsa_deque_iterator *)cdsa_create_ringbuffer_iterator(d->rb);

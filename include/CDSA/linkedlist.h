@@ -7,7 +7,7 @@
 
 typedef struct cdsa_linkedlist cdsa_linkedlist;
 
-cdsa_linkedlist *cdsa_create_linkedlist(cdsa_size_t elem_size);
+cdsa_linkedlist *cdsa_create_linkedlist(size_t elem_size);
 void cdsa_free_linkedlist(cdsa_linkedlist *list);
 /**
  * @brief Pushes an element onto the front of the linked list.
@@ -19,9 +19,9 @@ void cdsa_free_linkedlist(cdsa_linkedlist *list);
  * memory and must free it before destroying the list.
  */
 CDSA_STATUS cdsa_push_front_linkedlist(cdsa_linkedlist *list, void *value);
-cdsa_size_t cdsa_size_linkedlist(cdsa_linkedlist *list);
-bool cdsa_is_empty_linkedlist(cdsa_linkedlist *list);
-void *cdsa_front_linkedlist(cdsa_linkedlist *list);
+size_t cdsa_size_linkedlist(const cdsa_linkedlist *list);
+bool cdsa_is_empty_linkedlist(const cdsa_linkedlist *list);
+void *cdsa_front_linkedlist(const cdsa_linkedlist *list);
 CDSA_STATUS cdsa_pop_front_linkedlist(cdsa_linkedlist *list);
 void cdsa_clear_linkedlist(cdsa_linkedlist *list);
 void print_linkedlist(cdsa_linkedlist *list, void (*print_fn)(void *));
@@ -34,7 +34,7 @@ typedef struct cdsa_linkedlist_iterator cdsa_linkedlist_iterator;
  * @brief Creates a new iterator for the cdsa_linkedlist.
  * @warning The caller must free the iterator using cdsa_free_linkedlist_iterator.
  */
-cdsa_linkedlist_iterator *cdsa_create_linkedlist_iterator(cdsa_linkedlist *list);
+cdsa_linkedlist_iterator *cdsa_create_linkedlist_iterator(const cdsa_linkedlist *list);
 
 /**
  * @brief Checks if there are more nodes to read.

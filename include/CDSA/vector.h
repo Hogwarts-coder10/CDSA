@@ -7,7 +7,7 @@
 
 typedef struct cdsa_vector cdsa_vector;
 
-cdsa_vector *cdsa_create_vector(cdsa_size_t elem_size);
+cdsa_vector *cdsa_create_vector(size_t elem_size);
 /**
  * @brief Pushes an element into the collection.
  *
@@ -19,16 +19,16 @@ cdsa_vector *cdsa_create_vector(cdsa_size_t elem_size);
  */
 
 CDSA_STATUS cdsa_push_vector(cdsa_vector *vec, void *elem);
-void *get_vector(cdsa_vector *vec, cdsa_size_t index);
+void *get_vector(cdsa_vector *vec, size_t index);
 void cdsa_free_vector(cdsa_vector *vec);
 CDSA_STATUS cdsa_pop_vector(cdsa_vector *vec);
-void *cdsa_front_vector(cdsa_vector *vec);
-void *cdsa_back_vector(cdsa_vector *vec);
-cdsa_size_t cdsa_size_vector(cdsa_vector *vec);
-cdsa_size_t capacity_vector(cdsa_vector *vec);
-CDSA_STATUS set_vector(cdsa_vector *vec, cdsa_size_t index, void *elem);
+void *cdsa_front_vector(const cdsa_vector *vec);
+void *cdsa_back_vector(const cdsa_vector *vec);
+size_t cdsa_size_vector(const cdsa_vector *vec);
+size_t capacity_vector(cdsa_vector *vec);
+CDSA_STATUS set_vector(cdsa_vector *vec, size_t index, void *elem);
 void cdsa_clear_vector(cdsa_vector *vec);
-bool cdsa_is_empty_vector(cdsa_vector *vec);
+bool cdsa_is_empty_vector(const cdsa_vector *vec);
 
 // --- Iterator API ---
 
@@ -38,7 +38,7 @@ typedef struct cdsa_vector_iterator cdsa_vector_iterator;
  * @brief Creates a new iterator for the cdsa_vector.
  * @warning The caller must free the iterator using cdsa_free_vector_iterator.
  */
-cdsa_vector_iterator *cdsa_create_vector_iterator(cdsa_vector *vec);
+cdsa_vector_iterator *cdsa_create_vector_iterator(const cdsa_vector *vec);
 
 /**
  * @brief Checks if there are more elements to read.

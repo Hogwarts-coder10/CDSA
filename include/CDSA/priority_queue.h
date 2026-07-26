@@ -10,7 +10,7 @@ typedef bool (*PriorityCompareFn)(void *a, void *b);
 typedef struct cdsa_priority_queue cdsa_priority_queue;
 
 // --- LifeCycle ---
-cdsa_priority_queue *cdsa_create_pq(cdsa_size_t elem_size, PriorityCompareFn cmp_func);
+cdsa_priority_queue *cdsa_create_pq(size_t elem_size, PriorityCompareFn cmp_func);
 void cdsa_free_pq(cdsa_priority_queue *pq);
 
 // --- Operations ---
@@ -31,10 +31,10 @@ CDSA_STATUS cdsa_push_pq(cdsa_priority_queue *pq, void *elem);
 CDSA_STATUS cdsa_pop_pq(cdsa_priority_queue *pq, void *out_elem);
 
 // Returns a pointer to the highest priority element without removing it.
-void *cdsa_peek_pq(cdsa_priority_queue *pq);
+void *cdsa_peek_pq(const cdsa_priority_queue *pq);
 
-cdsa_size_t cdsa_size_pq(cdsa_priority_queue *pq);
-bool cdsa_is_empty_pq(cdsa_priority_queue *pq);
+size_t cdsa_size_pq(const cdsa_priority_queue *pq);
+bool cdsa_is_empty_pq(const cdsa_priority_queue *pq);
 void cdsa_clear_pq(cdsa_priority_queue *pq);
 
 // --- Iterator API ---
@@ -49,7 +49,7 @@ typedef struct cdsa_vector_iterator cdsa_priority_queue_iterator;
  * @note Elements are yielded in heap-array order (level-order), NOT strictly
  * sorted order.
  */
-cdsa_priority_queue_iterator *cdsa_create_priority_queue_iterator(cdsa_priority_queue *pq);
+cdsa_priority_queue_iterator *cdsa_create_priority_queue_iterator(const cdsa_priority_queue *pq);
 
 bool cdsa_has_next_priority_queue(cdsa_priority_queue_iterator *iter);
 

@@ -16,7 +16,7 @@ typedef struct SkipNode {
 struct SkipList {
   SkipNode *header; // starting node (dummy)
   int level;        // current highest level in use
-  cdsa_size_t size;      // total number of items
+  size_t size;      // total number of items
 };
 
 // --- Internal Helpers ---
@@ -34,7 +34,7 @@ static int random_level() {
 
 // Portable strdup — no POSIX feature-test macro required
 static char *safe_strdup(const char *s) {
-  cdsa_size_t len = strlen(s) + 1;
+  size_t len = strlen(s) + 1;
   char *dup = CDSA_MALLOC(len);
   if (dup)
     memcpy(dup, s, len);
@@ -103,7 +103,7 @@ void cdsa_free_skiplist(SkipList *sl) {
 
 // --- Core Operations ---
 
-cdsa_size_t cdsa_size_skiplist(SkipList *sl) {
+size_t cdsa_size_skiplist(SkipList *sl) {
   if (sl == NULL)
     return 0;
   return sl->size;

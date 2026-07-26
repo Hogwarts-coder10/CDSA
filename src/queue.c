@@ -9,7 +9,7 @@ struct cdsa_queue {
   cdsa_ringbuffer *rb;
 };
 
-cdsa_queue *cdsa_create_queue(cdsa_size_t capacity, cdsa_size_t elem_size) {
+cdsa_queue *cdsa_create_queue(size_t capacity, size_t elem_size) {
   cdsa_queue *queue = CDSA_MALLOC(sizeof(cdsa_queue));
   if (queue == NULL) {
     return NULL;
@@ -49,7 +49,7 @@ CDSA_STATUS cdsa_dequeue(cdsa_queue *queue) {
   return cdsa_pop_front_ringbuffer(queue->rb);
 }
 
-void *cdsa_front_queue(cdsa_queue *queue) {
+void *cdsa_front_queue(const cdsa_queue *queue) {
   if (queue == NULL)
     return NULL;
   return cdsa_front_ringbuffer(queue->rb);
@@ -57,19 +57,19 @@ void *cdsa_front_queue(cdsa_queue *queue) {
 
 // --- Utilities ---
 
-cdsa_size_t cdsa_size_queue(cdsa_queue *queue) {
+size_t cdsa_size_queue(const cdsa_queue *queue) {
   if (queue == NULL)
     return 0;
   return cdsa_size_ringbuffer(queue->rb);
 }
 
-bool cdsa_is_empty_queue(cdsa_queue *queue) {
+bool cdsa_is_empty_queue(const cdsa_queue *queue) {
   if (queue == NULL)
     return true;
   return cdsa_is_empty_ringbuffer(queue->rb);
 }
 
-bool cdsa_is_full_queue(cdsa_queue *queue) {
+bool cdsa_is_full_queue(const cdsa_queue *queue) {
   if (queue == NULL)
     return false;
   return cdsa_is_full_ringbuffer(queue->rb);
@@ -79,7 +79,7 @@ bool cdsa_is_full_queue(cdsa_queue *queue) {
 
 // --- Iterator Implementation ---
 
-cdsa_queue_iterator *cdsa_create_queue_iterator(cdsa_queue *q) {
+cdsa_queue_iterator *cdsa_create_queue_iterator(const cdsa_queue *q) {
   if (q == NULL)
     return NULL;
   // Route directly to the underlying cdsa_ringbuffer

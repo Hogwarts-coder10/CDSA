@@ -7,13 +7,13 @@
 
 struct cdsa_priority_queue {
   cdsa_vector *data;
-  cdsa_size_t elem_size;
+  size_t elem_size;
   PriorityCompareFn cmp;
 };
 
 // --- Internal Helpers: Heap Math ---
 
-static CDSA_STATUS sift_up(cdsa_priority_queue *pq, cdsa_size_t index) {
+static CDSA_STATUS sift_up(cdsa_priority_queue *pq, size_t index) {
   if (index == 0)
     return CDSA_OK;
 
@@ -24,7 +24,7 @@ static CDSA_STATUS sift_up(cdsa_priority_queue *pq, cdsa_size_t index) {
   }
 
   while (index > 0) {
-    cdsa_size_t parent_idx = (index - 1) / 2;
+    size_t parent_idx = (index - 1) / 2;
 
     void *current_val = get_vector(pq->data, index);
     void *parent_val = get_vector(pq->data, parent_idx);
@@ -45,8 +45,8 @@ static CDSA_STATUS sift_up(cdsa_priority_queue *pq, cdsa_size_t index) {
   return CDSA_OK;
 }
 
-static CDSA_STATUS sift_down(cdsa_priority_queue *pq, cdsa_size_t index) {
-  cdsa_size_t size = cdsa_size_vector(pq->data);
+static CDSA_STATUS sift_down(cdsa_priority_queue *pq, size_t index) {
+  size_t size = cdsa_size_vector(pq->data);
   void *temp = CDSA_MALLOC(pq->elem_size);
 
   if (temp == NULL) {
@@ -54,9 +54,9 @@ static CDSA_STATUS sift_down(cdsa_priority_queue *pq, cdsa_size_t index) {
   }
 
   while (true) {
-    cdsa_size_t left_child = 2 * index + 1;
-    cdsa_size_t right_child = 2 * index + 2;
-    cdsa_size_t highest_priority = index;
+    size_t left_child = 2 * index + 1;
+    size_t right_child = 2 * index + 2;
+    size_t highest_priority = index;
 
     if (left_child < size) {
       void *left_val = get_vector(pq->data, left_child);
@@ -95,7 +95,7 @@ static CDSA_STATUS sift_down(cdsa_priority_queue *pq, cdsa_size_t index) {
 
 // --- LifeCycle ---
 
-cdsa_priority_queue *cdsa_create_pq(cdsa_size_t elem_size, PriorityCompareFn cmp_func) {
+cdsa_priority_queue *cdsa_create_pq(size_t elem_size, PriorityCompareFn cmp_func) {
   cdsa_priority_queue *pq = CDSA_MALLOC(sizeof(cdsa_priority_queue));
 
   if (pq == NULL) {
@@ -163,19 +163,19 @@ CDSA_STATUS cdsa_pop_pq(cdsa_priority_queue *pq, void *out_elem) {
   return CDSA_OK;
 }
 
-void *cdsa_peek_pq(cdsa_priority_queue *pq) {
+void *cdsa_peek_pq(const cdsa_priority_queue *pq) {
   if (pq == NULL)
     return NULL;
   return cdsa_front_vector(pq->data);
 }
 
-cdsa_size_t cdsa_size_pq(cdsa_priority_queue *pq) {
+size_t cdsa_size_pq(const cdsa_priority_queue *pq) {
   if (pq == NULL)
     return 0;
   return cdsa_size_vector(pq->data);
 }
 
-bool cdsa_is_empty_pq(cdsa_priority_queue *pq) {
+bool cdsa_is_empty_pq(const cdsa_priority_queue *pq) {
   if (pq == NULL)
     return true;
   return cdsa_is_empty_vector(pq->data);
@@ -189,7 +189,7 @@ void cdsa_clear_pq(cdsa_priority_queue *pq) {
 
 // --- Iterator Implementation ---
 
-cdsa_priority_queue_iterator *cdsa_create_priority_queue_iterator(cdsa_priority_queue *pq) {
+cdsa_priority_queue_iterator *cdsa_create_priority_queue_iterator(const cdsa_priority_queue *pq) {
   if (pq == NULL)
     return NULL;
 
