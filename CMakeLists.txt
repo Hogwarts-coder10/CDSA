@@ -5,6 +5,20 @@ project(CDSA C)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# ==========================================
+# ====== SANITIZERS (Phase 3) ==============
+# ==========================================
+option(CDSA_USE_SANITIZERS "Enable Address and Undefined Behavior Sanitizers" OFF)
+
+if(CDSA_USE_SANITIZERS)
+    message(STATUS "CDSA: Building with ASan and UBSan enabled")
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1)
+    add_link_options(-fsanitize=address,undefined)
+endif()
+
+# ==========================================
+# ====== CORE LIBRARY ======================
+# ==========================================
 add_library(cdsa
     src/vector.c
     src/kstring.c
@@ -21,146 +35,6 @@ add_library(cdsa
 
 target_include_directories(cdsa PUBLIC include)
 
-add_executable(test_vector
-    tests/test_vector.c
-)
-
-target_link_libraries(test_vector cdsa)
-
-add_executable(test_kstring
-    tests/test_kstring.c
-)
-
-target_link_libraries(test_kstring
-    PRIVATE cdsa
-)
-
-add_executable(test_linkedlist
-    tests/test_linkedlist.c
-)
-
-target_link_libraries(test_linkedlist
-    PRIVATE cdsa
-)
-
-add_executable(test_stack
-    tests/test_stack.c
-)
-
-target_link_libraries(test_stack
-  PRIVATE cdsa
-)
-
-add_executable(test_hashmap
-  tests/test_hashmap.c
-)
-target_link_libraries(test_hashmap
-  PRIVATE cdsa
-)
-
-add_executable(test_ringbuffer
-  tests/test_ringbuffer.c
-)
-
-target_link_libraries(test_ringbuffer
-  PRIVATE cdsa
-)
-
-add_executable(test_queue
-  tests/test_queue.c
-)
-target_link_libraries(test_queue
-  PRIVATE  cdsa
-)
-
-add_executable(test_deque
-  tests/test_deque.c
-)
-
-target_link_libraries(test_deque
-  PRIVATE cdsa
-)
-
-add_executable(test_skiplist
-  tests/test_skiplist.c
-)
-
-target_link_libraries(test_skiplist
-  PRIVATE cdsa
-)
-
-add_executable(test_art
-  tests/test_art.c
-)
-
-target_link_libraries(test_art
-  PRIVATE cdsa
-)
-
-add_executable(test_priority_queue
-  tests/test_priority_queue.c
-)
-
-target_link_libraries(test_priority_queue
-  PRIVATE cdsa
-)
-
-add_executable(test_hashmap_iterator
-  tests/test_hashmap_iterator.c
-)
-target_link_libraries(test_hashmap_iterator
-  PRIVATE cdsa
-)
-
-
-add_executable(test_skiplist_iterator
-  tests/test_skiplist_iterator.c
-)
-target_link_libraries(test_skiplist_iterator
-  PRIVATE cdsa
-)
-
-
-add_executable(test_vector_iterator
-  tests/test_vector_iterator.c
-)
-target_link_libraries(test_vector_iterator
-  PRIVATE cdsa
-)
-
-
-add_executable(test_ringbuffer_iterator
-  tests/test_ringbuffer_iterator.c
-)
-target_link_libraries(test_ringbuffer_iterator
-  PRIVATE cdsa
-)
-
-
-add_executable(test_linkedlist_iterator
-  tests/test_linkedlist_iterator.c
-)
-target_link_libraries(test_linkedlist_iterator
-  PRIVATE cdsa
-)
-
-
-add_executable(test_wrappers_iterators
-  tests/test_wrappers_iterators.c
-)
-target_link_libraries(test_wrappers_iterators
-  PRIVATE cdsa
-)
-
-
-add_executable(test_art_iterator
-  tests/test_art_iterator.c
-)
-
-target_link_libraries(test_art_iterator
-  PRIVATE cdsa
-)
-
 target_compile_options(cdsa PRIVATE
     -Wall
     -Wextra
@@ -168,19 +42,85 @@ target_compile_options(cdsa PRIVATE
 )
 
 # ==========================================
+# ====== OPTIONAL TEST SUITE ===============
+# ==========================================
+# Check if CDSA is the top-level project, or a submodule in Kedis-C
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    set(CDSA_IS_TOP_LEVEL TRUE)
+else()
+    set(CDSA_IS_TOP_LEVEL FALSE)
+endif()
+
+option(CDSA_BUILD_TESTS "Build the CDSA test suite" ${CDSA_IS_TOP_LEVEL})
+
+if(CDSA_BUILD_TESTS)
+    enable_testing()
+
+    add_executable(test_vector tests/test_vector.c)
+    target_link_libraries(test_vector PRIVATE cdsa)
+
+    add_executable(test_kstring tests/test_kstring.c)
+    target_link_libraries(test_kstring PRIVATE cdsa)
+
+    add_executable(test_linkedlist tests/test_linkedlist.c)
+    target_link_libraries(test_linkedlist PRIVATE cdsa)
+
+    add_executable(test_stack tests/test_stack.c)
+    target_link_libraries(test_stack PRIVATE cdsa)
+
+    add_executable(test_hashmap tests/test_hashmap.c)
+    target_link_libraries(test_hashmap PRIVATE cdsa)
+
+    add_executable(test_ringbuffer tests/test_ringbuffer.c)
+    target_link_libraries(test_ringbuffer PRIVATE cdsa)
+
+    add_executable(test_queue tests/test_queue.c)
+    target_link_libraries(test_queue PRIVATE cdsa)
+
+    add_executable(test_deque tests/test_deque.c)
+    target_link_libraries(test_deque PRIVATE cdsa)
+
+    add_executable(test_skiplist tests/test_skiplist.c)
+    target_link_libraries(test_skiplist PRIVATE cdsa)
+
+    add_executable(test_art tests/test_art.c)
+    target_link_libraries(test_art PRIVATE cdsa)
+
+    add_executable(test_priority_queue tests/test_priority_queue.c)
+    target_link_libraries(test_priority_queue PRIVATE cdsa)
+
+    add_executable(test_hashmap_iterator tests/test_hashmap_iterator.c)
+    target_link_libraries(test_hashmap_iterator PRIVATE cdsa)
+
+    add_executable(test_skiplist_iterator tests/test_skiplist_iterator.c)
+    target_link_libraries(test_skiplist_iterator PRIVATE cdsa)
+
+    add_executable(test_vector_iterator tests/test_vector_iterator.c)
+    target_link_libraries(test_vector_iterator PRIVATE cdsa)
+
+    add_executable(test_ringbuffer_iterator tests/test_ringbuffer_iterator.c)
+    target_link_libraries(test_ringbuffer_iterator PRIVATE cdsa)
+
+    add_executable(test_linkedlist_iterator tests/test_linkedlist_iterator.c)
+    target_link_libraries(test_linkedlist_iterator PRIVATE cdsa)
+
+    add_executable(test_wrappers_iterators tests/test_wrappers_iterators.c)
+    target_link_libraries(test_wrappers_iterators PRIVATE cdsa)
+
+    add_executable(test_art_iterator tests/test_art_iterator.c)
+    target_link_libraries(test_art_iterator PRIVATE cdsa)
+endif()
+
+# ==========================================
 # ====== SYSTEM-WIDE INSTALLATION ==========
 # ==========================================
-
-# Include standard installation directory variables
 include(GNUInstallDirs)
 
-# 1. Install the compiled library (libcdsa.a)
 install(TARGETS cdsa
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
-# 2. Install the header files (keeping the CDSA/ prefix)
 install(DIRECTORY include/CDSA
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.h"
