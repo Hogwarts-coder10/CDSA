@@ -16,6 +16,24 @@ if(CDSA_USE_SANITIZERS)
     add_link_options(-fsanitize=address,undefined)
 endif()
 
+
+
+# ==========================================
+# ====== BENCHMARKS ========================
+# ==========================================
+option(CDSA_BUILD_BENCHMARKS "Build the CDSA benchmark suite" OFF)
+
+if(CDSA_BUILD_BENCHMARKS)
+    message(STATUS "CDSA: Building benchmarks")
+    
+    # We want max optimization for benchmarks, turn off sanitizers if benchmarking
+    # Usually, we compile benchmarks in Release mode (-O3)
+    add_executable(bench_collections bench/bench_collections.c)
+    target_link_libraries(bench_collections PRIVATE cdsa)
+    target_compile_options(bench_collections PRIVATE -O3)
+endif()
+
+
 # ==========================================
 # ====== CORE LIBRARY ======================
 # ==========================================

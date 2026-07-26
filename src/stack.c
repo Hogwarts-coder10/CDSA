@@ -7,12 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct Stack {
+struct cdsa_stack {
   cdsa_vector *vec;
 };
 
-Stack *cdsa_create_stack(size_t elem_size) {
-  Stack *stack = CDSA_MALLOC(sizeof(Stack));
+cdsa_stack *cdsa_create_stack(size_t elem_size) {
+  cdsa_stack *stack = CDSA_MALLOC(sizeof(cdsa_stack));
 
   if (stack == NULL) {
     return NULL;
@@ -27,7 +27,7 @@ Stack *cdsa_create_stack(size_t elem_size) {
   return stack;
 }
 
-CDSA_STATUS cdsa_push_stack(Stack *stack, void *value) {
+CDSA_STATUS cdsa_push_stack(cdsa_stack *stack, void *value) {
   if (stack == NULL || value == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -35,14 +35,14 @@ CDSA_STATUS cdsa_push_stack(Stack *stack, void *value) {
   return cdsa_push_vector(stack->vec, value);
 }
 
-void cdsa_free_stack(Stack *stack) {
+void cdsa_free_stack(cdsa_stack *stack) {
   if (stack == NULL)
     return;
   cdsa_free_vector(stack->vec);
   CDSA_FREE(stack);
 }
 
-CDSA_STATUS cdsa_pop_stack(Stack *stack) {
+CDSA_STATUS cdsa_pop_stack(cdsa_stack *stack) {
   if (stack == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -50,25 +50,25 @@ CDSA_STATUS cdsa_pop_stack(Stack *stack) {
   return cdsa_pop_vector(stack->vec);
 }
 
-void *top_stack(Stack *stack) {
+void *top_stack(cdsa_stack *stack) {
   if (stack == NULL)
     return NULL;
   return cdsa_back_vector(stack->vec);
 }
 
-size_t cdsa_size_stack(Stack *stack) {
+size_t cdsa_size_stack(const cdsa_stack *stack) {
   if (stack == NULL)
     return 0;
   return cdsa_size_vector(stack->vec);
 }
 
-bool cdsa_is_empty_stack(Stack *stack) {
+bool cdsa_is_empty_stack(const cdsa_stack *stack) {
   if (stack == NULL)
     return true;
   return cdsa_is_empty_vector(stack->vec);
 }
 
-void cdsa_clear_stack(Stack *stack) {
+void cdsa_clear_stack(cdsa_stack *stack) {
   if (stack == NULL)
     return;
   cdsa_clear_vector(stack->vec);

@@ -5,10 +5,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct HashMap HashMap;
+typedef struct cdsa_hashmap cdsa_hashmap;
 
-HashMap *cdsa_create_hashmap(size_t capacity);
-void cdsa_free_hashmap(HashMap *map);
+cdsa_hashmap *cdsa_create_hashmap(size_t capacity);
+void cdsa_free_hashmap(cdsa_hashmap *map);
 
 /**
  * @brief Inserts a key-value pair.
@@ -19,25 +19,25 @@ void cdsa_free_hashmap(HashMap *map);
  * - MEMORY: The caller is responsible for freeing the key and value after
  *   removing them from the map or freeing the map itself.
  */
-CDSA_STATUS insert_hashmap(HashMap *map, const char *key, void *value);
+CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value);
 
-void *get_hashmap(HashMap *map, const char *key);
-bool contains_hashmap(HashMap *map, const char *key);
-CDSA_STATUS remove_hashmap(HashMap *map, const char *key);
-void print_hashmap(HashMap *map);
-CDSA_STATUS resize_hashmap(HashMap *map);
-size_t cdsa_size_hashmap(HashMap *map);
+void *get_hashmap(cdsa_hashmap *map, const char *key);
+bool contains_hashmap(cdsa_hashmap *map, const char *key);
+CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key);
+void print_hashmap(cdsa_hashmap *map);
+CDSA_STATUS resize_hashmap(cdsa_hashmap *map);
+size_t cdsa_size_hashmap(const cdsa_hashmap *map);
 
 // --- Iterator API ---
 
 // Opaque iterator type
-typedef struct HashMapIterator HashMapIterator;
+typedef struct cdsa_hashmap_iterator cdsa_hashmap_iterator;
 
 /**
  * @brief Creates a new iterator for the hashmap.
  * @warning The caller must free the iterator using cdsa_free_hashmap_iterator.
  */
-HashMapIterator *cdsa_create_hashmap_iterator(HashMap *map);
+cdsa_hashmap_iterator *cdsa_create_hashmap_iterator(const cdsa_hashmap *map);
 
 /**
  * @brief Checks if there are more valid entries to read.
@@ -46,19 +46,19 @@ HashMapIterator *cdsa_create_hashmap_iterator(HashMap *map);
  * @warning Returns false if the underlying map has been structuraly modified
  * (resized) since the iterator was created.
  */
-bool cdsa_has_next_hashmap(HashMapIterator *iter);
+bool cdsa_has_next_hashmap(cdsa_hashmap_iterator *iter);
 
 /**
  * @brief Advances the iterator and retrieves the next key-value pair.
  * @return CDSA_OK on success, or CDSA_ERR_ITER_INVALIDATED if a concurrent
  * mutation (resize) happened during the walk pass.
  */
-CDSA_STATUS cdsa_next_hashmap(HashMapIterator *iter, const char **out_key,
+CDSA_STATUS cdsa_next_hashmap(cdsa_hashmap_iterator *iter, const char **out_key,
                          void **out_value);
 
 /**
  * @brief Frees the iterator memory.
  */
-void cdsa_free_hashmap_iterator(HashMapIterator *iter);
+void cdsa_free_hashmap_iterator(cdsa_hashmap_iterator *iter);
 
 #endif

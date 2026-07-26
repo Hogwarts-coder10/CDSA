@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 int main() {
-  Stack *stack = cdsa_create_stack(sizeof(int));
+  cdsa_stack *stack = cdsa_create_stack(sizeof(int));
   int a = 10;
   int b = 20;
   int c = 12;

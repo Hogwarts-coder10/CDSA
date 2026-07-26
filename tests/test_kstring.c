@@ -3,7 +3,7 @@
 
 int main(void) {
 
-  KString *str = cdsa_create_kstring();
+  cdsa_kstring *str = cdsa_create_kstring();
 
   printf("Size: %zu\n", cdsa_size_kstring(str));
 

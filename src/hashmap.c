@@ -14,7 +14,7 @@ typedef struct {
   void *value;
 } HashEntry;
 
-struct HashMap {
+struct cdsa_hashmap {
   size_t capacity;
   size_t size;
   size_t occupied;
@@ -22,8 +22,8 @@ struct HashMap {
   HashEntry *entries;
 };
 
-HashMap *cdsa_create_hashmap(size_t capacity) {
-  HashMap *map = CDSA_MALLOC(sizeof(HashMap));
+cdsa_hashmap *cdsa_create_hashmap(size_t capacity) {
+  cdsa_hashmap *map = CDSA_MALLOC(sizeof(cdsa_hashmap));
 
   if (map == NULL) {
     return NULL;
@@ -48,14 +48,14 @@ HashMap *cdsa_create_hashmap(size_t capacity) {
   return map;
 }
 
-void cdsa_free_hashmap(HashMap *map) {
+void cdsa_free_hashmap(cdsa_hashmap *map) {
   if (map == NULL)
     return;
   CDSA_FREE(map->entries);
   CDSA_FREE(map);
 }
 
-size_t cdsa_size_hashmap(HashMap *map) {
+size_t cdsa_size_hashmap(const cdsa_hashmap *map) {
   if (map == NULL)
     return 0;
   return map->size;
@@ -70,7 +70,7 @@ static size_t hash_function(const char *key, size_t capacity) {
   return hash % capacity;
 }
 
-CDSA_STATUS insert_hashmap(HashMap *map, const char *key, void *value) {
+CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
   if (map == NULL || key == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -112,7 +112,7 @@ CDSA_STATUS insert_hashmap(HashMap *map, const char *key, void *value) {
   return CDSA_OK;
 }
 
-void print_hashmap(HashMap *map) {
+void print_hashmap(cdsa_hashmap *map) {
   if (map == NULL)
     return;
 
@@ -125,7 +125,7 @@ void print_hashmap(HashMap *map) {
   }
 }
 
-void *get_hashmap(HashMap *map, const char *key) {
+void *get_hashmap(cdsa_hashmap *map, const char *key) {
   if (map == NULL || key == NULL)
     return NULL;
 
@@ -149,13 +149,13 @@ void *get_hashmap(HashMap *map, const char *key) {
   return NULL;
 }
 
-bool contains_hashmap(HashMap *map, const char *key) {
+bool contains_hashmap(cdsa_hashmap *map, const char *key) {
   // A simple wrapper: if get_hashmap returns anything other than NULL, it
   // exists.
   return get_hashmap(map, key) != NULL;
 }
 
-CDSA_STATUS resize_hashmap(HashMap *map) {
+CDSA_STATUS resize_hashmap(cdsa_hashmap *map) {
   if (map == NULL)
     return CDSA_ERR_INVALID;
 
@@ -166,7 +166,7 @@ CDSA_STATUS resize_hashmap(HashMap *map) {
   HashEntry *new_entries = CDSA_CALLOC(new_capacity, sizeof(HashEntry));
 
   if (new_entries == NULL) {
-    printf("[System] Warning: HashMap resize failed due to OOM.\n");
+    printf("[System] Warning: cdsa_hashmap resize failed due to OOM.\n");
     return CDSA_ERR_OOM;
   }
 
@@ -186,11 +186,11 @@ CDSA_STATUS resize_hashmap(HashMap *map) {
 
   CDSA_FREE(old_entries);
   map->version++; // resizing invalidates all active Iterators
-  printf("[System] HashMap resized to capacity: %zu\n", map->capacity);
+  printf("[System] cdsa_hashmap resized to capacity: %zu\n", map->capacity);
   return CDSA_OK;
 }
 
-CDSA_STATUS remove_hashmap(HashMap *map, const char *key) {
+CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
   if (map == NULL || key == NULL)
     return CDSA_ERR_INVALID;
 
@@ -218,17 +218,17 @@ CDSA_STATUS remove_hashmap(HashMap *map, const char *key) {
 
 // --- Iterator Implementation ---
 
-struct HashMapIterator {
-  HashMap *map;
+struct cdsa_hashmap_iterator {
+  const cdsa_hashmap *map;
   size_t current_index;
   size_t snapshot_version;
 };
 
-HashMapIterator *cdsa_create_hashmap_iterator(HashMap *map) {
+cdsa_hashmap_iterator *cdsa_create_hashmap_iterator(const cdsa_hashmap *map) {
   if (map == NULL)
     return NULL;
 
-  HashMapIterator *iter = CDSA_MALLOC(sizeof(HashMapIterator));
+  cdsa_hashmap_iterator *iter = CDSA_MALLOC(sizeof(cdsa_hashmap_iterator));
   if (iter == NULL)
     return NULL;
 
@@ -238,7 +238,7 @@ HashMapIterator *cdsa_create_hashmap_iterator(HashMap *map) {
   return iter;
 }
 
-bool cdsa_has_next_hashmap(HashMapIterator *iter) {
+bool cdsa_has_next_hashmap(cdsa_hashmap_iterator *iter) {
   if (iter == NULL || iter->map == NULL)
     return false;
 
@@ -260,8 +260,8 @@ bool cdsa_has_next_hashmap(HashMapIterator *iter) {
   return false; // Reached the end of the capacity
 }
 
-CDSA_STATUS cdsa_next_hashmap(HashMapIterator *iter, const char **out_key,
-                         void **out_value) {
+CDSA_STATUS cdsa_next_hashmap(cdsa_hashmap_iterator *iter, const char **out_key,
+                              void **out_value) {
   if (iter == NULL || out_key == NULL)
     return CDSA_ERR_INVALID;
 
@@ -285,7 +285,7 @@ CDSA_STATUS cdsa_next_hashmap(HashMapIterator *iter, const char **out_key,
   return CDSA_OK;
 }
 
-void cdsa_free_hashmap_iterator(HashMapIterator *iter) {
+void cdsa_free_hashmap_iterator(cdsa_hashmap_iterator *iter) {
   if (iter == NULL)
     return;
   CDSA_FREE(iter);

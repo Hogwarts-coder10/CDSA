@@ -2,9 +2,9 @@
 #include <stdio.h>
 
 int main() {
-  printf("🚀 Starting HashMap Tests...\n\n");
+  printf("🚀 Starting cdsa_hashmap Tests...\n\n");
 
-  HashMap *map = cdsa_create_hashmap(16);
+  cdsa_hashmap *map = cdsa_create_hashmap(16);
 
   // 1. Basic Insertion & Retrieval
   printf("[*] Testing Insertion & Retrieval...\n");
@@ -28,7 +28,7 @@ int main() {
   insert_hashmap(map, "apple", &new_a); // Should overwrite 10 with 99
 
   printf("apple -> %d (Expected: 99)\n", *(int *)get_hashmap(map, "apple"));
-  printf("HashMap Size: %zu (Expected: 2)\n\n", cdsa_size_hashmap(map));
+  printf("cdsa_hashmap Size: %zu (Expected: 2)\n\n", cdsa_size_hashmap(map));
 
   // 4. Load Factor Guard & Resizing
   printf("[*] Testing Load Factor Guard & Resizing...\n");

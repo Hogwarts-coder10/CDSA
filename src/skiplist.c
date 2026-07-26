@@ -13,7 +13,7 @@ typedef struct SkipNode {
       *forward; // array of pointers to the next nodes at higher level
 } SkipNode;
 
-struct SkipList {
+struct cdsa_skiplist {
   SkipNode *header; // starting node (dummy)
   int level;        // current highest level in use
   size_t size;      // total number of items
@@ -66,8 +66,8 @@ static SkipNode *cdsa_create_node(int level, double score, const char *value) {
 
 // --- Lifecycle ---
 
-SkipList *cdsa_create_skiplist() {
-  SkipList *sl = CDSA_MALLOC(sizeof(SkipList));
+cdsa_skiplist *cdsa_create_skiplist() {
+  cdsa_skiplist *sl = CDSA_MALLOC(sizeof(cdsa_skiplist));
 
   if (sl == NULL) {
     return NULL;
@@ -86,7 +86,7 @@ SkipList *cdsa_create_skiplist() {
   return sl;
 }
 
-void cdsa_free_skiplist(SkipList *sl) {
+void cdsa_free_skiplist(cdsa_skiplist *sl) {
   if (sl == NULL)
     return;
 
@@ -103,19 +103,20 @@ void cdsa_free_skiplist(SkipList *sl) {
 
 // --- Core Operations ---
 
-size_t cdsa_size_skiplist(SkipList *sl) {
+size_t cdsa_size_skiplist(const cdsa_skiplist *sl) {
   if (sl == NULL)
     return 0;
   return sl->size;
 }
 
-int level_skiplist(SkipList *sl) {
+int level_skiplist(cdsa_skiplist *sl) {
   if (sl == NULL)
     return 0;
   return sl->level;
 }
 
-CDSA_STATUS insert_skiplist(SkipList *sl, double score, const char *value) {
+CDSA_STATUS insert_skiplist(cdsa_skiplist *sl, double score,
+                            const char *value) {
   if (sl == NULL || value == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -169,7 +170,8 @@ CDSA_STATUS insert_skiplist(SkipList *sl, double score, const char *value) {
   return CDSA_OK;
 }
 
-CDSA_STATUS remove_skiplist(SkipList *sl, double score, const char *value) {
+CDSA_STATUS remove_skiplist(cdsa_skiplist *sl, double score,
+                            const char *value) {
   if (sl == NULL || value == NULL) {
     return CDSA_ERR_INVALID;
   }
@@ -225,7 +227,7 @@ CDSA_STATUS remove_skiplist(SkipList *sl, double score, const char *value) {
   return CDSA_ERR_NOT_FOUND; // Node didn't exist
 }
 
-char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
+char **get_range_skiplist(cdsa_skiplist *sl, double min_score, double max_score,
                           int *out_count) {
   if (sl == NULL || out_count == NULL) {
     return NULL;
@@ -285,16 +287,16 @@ char **get_range_skiplist(SkipList *sl, double min_score, double max_score,
   return results;
 }
 
-struct SkipListIterator {
-  SkipList *sl;
+struct cdsa_skiplist_iterator {
+  const cdsa_skiplist *sl;
   SkipNode *current;
 };
 
-SkipListIterator *cdsa_create_skiplist_iterator(SkipList *sl) {
+cdsa_skiplist_iterator *cdsa_create_skiplist_iterator(const cdsa_skiplist *sl) {
   if (sl == NULL)
     return NULL;
 
-  SkipListIterator *iter = CDSA_MALLOC(sizeof(SkipListIterator));
+  cdsa_skiplist_iterator *iter = CDSA_MALLOC(sizeof(cdsa_skiplist_iterator));
   if (iter == NULL)
     return NULL;
 
@@ -305,14 +307,14 @@ SkipListIterator *cdsa_create_skiplist_iterator(SkipList *sl) {
   return iter;
 }
 
-bool cdsa_has_next_skiplist(SkipListIterator *iter) {
+bool cdsa_has_next_skiplist(cdsa_skiplist_iterator *iter) {
   if (iter == NULL)
     return false;
   return iter->current != NULL;
 }
 
-CDSA_STATUS cdsa_next_skiplist(SkipListIterator *iter, double *out_score,
-                          const char **out_value) {
+CDSA_STATUS cdsa_next_skiplist(cdsa_skiplist_iterator *iter, double *out_score,
+                               const char **out_value) {
   if (iter == NULL || iter->current == NULL) {
     return CDSA_ERR_NOT_FOUND;
   }
@@ -331,7 +333,7 @@ CDSA_STATUS cdsa_next_skiplist(SkipListIterator *iter, double *out_score,
   return CDSA_OK;
 }
 
-void cdsa_free_skiplist_iterator(SkipListIterator *iter) {
+void cdsa_free_skiplist_iterator(cdsa_skiplist_iterator *iter) {
   if (iter == NULL)
     return;
   CDSA_FREE(iter);

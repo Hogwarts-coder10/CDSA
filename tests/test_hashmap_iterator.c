@@ -5,9 +5,9 @@
 #include <stdlib.h>
 
 void test_hashmap_iterator() {
-  printf("\n=== Testing HashMap Iterator ===\n");
+  printf("\n=== Testing cdsa_hashmap Iterator ===\n");
 
-  HashMap *map = cdsa_create_hashmap(16);
+  cdsa_hashmap *map = cdsa_create_hashmap(16);
 
   // 1. Allocate some values (Remember: The caller owns these!)
   int *val1 = CDSA_MALLOC(sizeof(int));
@@ -22,7 +22,7 @@ void test_hashmap_iterator() {
   insert_hashmap(map, "Charlie", val3);
 
   // 2. Pass One: Read the data using the Iterator
-  HashMapIterator *iter = cdsa_create_hashmap_iterator(map);
+  cdsa_hashmap_iterator *iter = cdsa_create_hashmap_iterator(map);
   const char *key;
   void *value;
   int count = 0;
@@ -42,7 +42,7 @@ void test_hashmap_iterator() {
 
   // 3. Pass Two: Use a NEW iterator to safely free the caller-owned values!
   // This proves why the iterator is so powerful for Kedis-C.
-  HashMapIterator *cleanup_iter = cdsa_create_hashmap_iterator(map);
+  cdsa_hashmap_iterator *cleanup_iter = cdsa_create_hashmap_iterator(map);
 
   while (cdsa_has_next_hashmap(cleanup_iter)) {
     cdsa_next_hashmap(cleanup_iter, &key, &value);
@@ -62,7 +62,7 @@ void test_iterator_mutation_guard() {
 
   // 1. Create a map with a deliberately TINY capacity (e.g., 4)
   // so it's very easy to trigger a resize.
-  HashMap *map = cdsa_create_hashmap(4);
+  cdsa_hashmap *map = cdsa_create_hashmap(4);
 
   // 2. Insert just enough to fill it without resizing
   int *v1 = CDSA_MALLOC(sizeof(int));
@@ -73,7 +73,7 @@ void test_iterator_mutation_guard() {
   insert_hashmap(map, "Key2", v2);
 
   // 3. Start iterating
-  HashMapIterator *iter = cdsa_create_hashmap_iterator(map);
+  cdsa_hashmap_iterator *iter = cdsa_create_hashmap_iterator(map);
   const char *key;
   void *value;
 
@@ -115,7 +115,7 @@ void test_iterator_mutation_guard() {
 
   // We must create a fresh iterator to clean up the memory,
   // because the old one is permanently locked out!
-  HashMapIterator *cleanup_iter = cdsa_create_hashmap_iterator(map);
+  cdsa_hashmap_iterator *cleanup_iter = cdsa_create_hashmap_iterator(map);
   while (cdsa_has_next_hashmap(cleanup_iter)) {
     cdsa_next_hashmap(cleanup_iter, &key, &value);
     CDSA_FREE(value);

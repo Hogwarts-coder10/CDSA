@@ -25,7 +25,7 @@ static int range_contains(char **results, int count, const char *val) {
 
 static void test_create_empty() {
   printf("[*] test_create_empty\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
   assert(sl != NULL);
   assert(cdsa_size_skiplist(sl) == 0);
   assert(level_skiplist(sl) >= 1);
@@ -35,7 +35,7 @@ static void test_create_empty() {
 
 static void test_basic_insert_and_size() {
   printf("[*] test_basic_insert_and_size\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   assert(insert_skiplist(sl, 1.0, "alpha") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 1);
@@ -52,7 +52,7 @@ static void test_basic_insert_and_size() {
 
 static void test_delete_existing() {
   printf("[*] test_delete_existing\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 10.0, "alice");
   insert_skiplist(sl, 20.0, "bob");
@@ -76,7 +76,7 @@ static void test_delete_existing() {
 
 static void test_delete_nonexistent() {
   printf("[*] test_delete_nonexistent\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 5.0, "x");
   assert(remove_skiplist(sl, 9999.0, "ghost") != CDSA_OK);
@@ -89,7 +89,7 @@ static void test_delete_nonexistent() {
 
 static void test_delete_then_reinsert() {
   printf("[*] test_delete_then_reinsert\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 1.0, "ping");
   assert(remove_skiplist(sl, 1.0, "ping") == CDSA_OK);
@@ -111,7 +111,7 @@ static void test_delete_then_reinsert() {
 
 static void test_tied_scores_alphabetical_order() {
   printf("[*] test_tied_scores_alphabetical_order\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   // All same score — skiplist must fall back to alphabetical (like Redis ZADD)
   insert_skiplist(sl, 1500.0, "Karthik");
@@ -137,7 +137,7 @@ static void test_tied_scores_alphabetical_order() {
 
 static void test_range_query_basic() {
   printf("[*] test_range_query_basic\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 100.0, "low");
   insert_skiplist(sl, 500.0, "mid");
@@ -155,7 +155,7 @@ static void test_range_query_basic() {
 
 static void test_range_query_inclusive_bounds() {
   printf("[*] test_range_query_inclusive_bounds\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 1.0, "a");
   insert_skiplist(sl, 2.0, "b");
@@ -179,7 +179,7 @@ static void test_range_query_inclusive_bounds() {
 
 static void test_range_query_empty_result() {
   printf("[*] test_range_query_empty_result\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 1.0, "a");
   insert_skiplist(sl, 2.0, "b");
@@ -195,7 +195,7 @@ static void test_range_query_empty_result() {
 
 static void test_range_query_all() {
   printf("[*] test_range_query_all\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 1.0, "a");
   insert_skiplist(sl, 2.0, "b");
@@ -216,7 +216,7 @@ static void test_range_query_all() {
 
 static void test_level_shrinks_after_delete() {
   printf("[*] test_level_shrinks_after_delete\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   // Insert many entries to ensure some tall nodes are created
   for (int i = 0; i < 50; i++) {
@@ -241,7 +241,7 @@ static void test_level_shrinks_after_delete() {
 
 static void test_insert_delete_churn() {
   printf("[*] test_insert_delete_churn\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   // Repeated insert/delete of the same key — verifies no leak or corruption
   for (int i = 0; i < 500; i++) {
@@ -263,7 +263,7 @@ static void test_free_null() {
 
 static void test_range_caller_owns_strings() {
   printf("[*] test_range_caller_owns_strings\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 1.0, "original");
 
@@ -284,7 +284,7 @@ static void test_range_caller_owns_strings() {
 
 static void test_kedis_style_namespaced_keys() {
   printf("[*] test_kedis_style_namespaced_keys\n");
-  SkipList *sl = cdsa_create_skiplist();
+  cdsa_skiplist *sl = cdsa_create_skiplist();
 
   insert_skiplist(sl, 1.0, "session:user:12345:auth_token");
   insert_skiplist(sl, 2.0, "session:user:12345:refresh_token");
