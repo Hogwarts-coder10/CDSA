@@ -16,8 +16,6 @@ if(CDSA_USE_SANITIZERS)
     add_link_options(-fsanitize=address,undefined)
 endif()
 
-
-
 # ==========================================
 # ====== BENCHMARKS ========================
 # ==========================================
@@ -31,8 +29,12 @@ if(CDSA_BUILD_BENCHMARKS)
     add_executable(bench_collections bench/bench_collections.c)
     target_link_libraries(bench_collections PRIVATE cdsa)
     target_compile_options(bench_collections PRIVATE -O3)
-endif()
 
+    # Added Advanced Workload Simulator
+    add_executable(bench_workloads bench/bench_workloads.c)
+    target_link_libraries(bench_workloads PRIVATE cdsa)
+    target_compile_options(bench_workloads PRIVATE -O3)
+endif()
 
 # ==========================================
 # ====== CORE LIBRARY ======================
@@ -49,6 +51,7 @@ add_library(cdsa
     src/skiplist.c
     src/art.c
     src/priority_queue.c
+    src/allocator.c  # <--- Added global memory tracker
 )
 
 target_include_directories(cdsa PUBLIC include)
