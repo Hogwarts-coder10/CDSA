@@ -590,6 +590,10 @@ static void *recursive_delete(void *node, const char *key, int depth,
 
     if (header->type == NODE4) {
       Node4 *n = (Node4 *)node;
+      if (n->num_children == 0) {
+        CDSA_FREE(n);
+        return NULL;
+      }
       if (n->num_children == 1) {
         void *surviving_child = n->children[0];
         uint8_t routing_char = n->keys[0];
@@ -933,12 +937,19 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
           ArtLeaf *new_leaf = alloc_leaf(key, value);
           if (new_leaf == NULL)
             return CDSA_ERR_OOM;
-          uint8_t new_index = n->num_children;
-          n->children[new_index] = new_leaf;
-          n->child_index[c] = new_index;
+
+          /* FIXED: Find the first truly empty slot in the children array */
+          int free_idx = 0;
+          while (free_idx < 48 && n->children[free_idx] != NULL) {
+            free_idx++;
+          }
+
+          n->children[free_idx] = new_leaf;
+          n->child_index[c] = (uint8_t)free_idx;
           n->num_children++;
           tree->size++;
           return CDSA_OK;
+
         } else {
           Node256 *new_node = upgrade_node48_to_node256(n);
           if (new_node == NULL) // old Node48 still intact

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(CDSA C)
+project(CDSA C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -34,6 +34,18 @@ if(CDSA_BUILD_BENCHMARKS)
     add_executable(bench_workloads bench/bench_workloads.c)
     target_link_libraries(bench_workloads PRIVATE cdsa)
     target_compile_options(bench_workloads PRIVATE -O3)
+
+    # Added STL Baseline Comparison (C++)
+    add_executable(bench_stl_baseline bench/bench_stl_baseline.cpp)
+    target_link_libraries(bench_stl_baseline PRIVATE cdsa)
+    target_compile_options(bench_stl_baseline PRIVATE -O3)
+
+    add_executable(bench_fuzzer bench/bench_fuzzer.c)
+    target_link_libraries(bench_fuzzer PRIVATE cdsa)
+    target_compile_options(bench_fuzzer PRIVATE -O3)
+
+
+
 endif()
 
 # ==========================================
