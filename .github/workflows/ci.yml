@@ -20,17 +20,12 @@ jobs:
         sudo apt-get install -y cmake gcc valgrind
 
     - name: Configure Engine Build
-      run: cmake -B build-bench -DCMAKE_BUILD_TYPE=Release
+      # We added the -DCDSA_BUILD_BENCHMARKS=ON flag here so CMake actually builds the fuzzer
+      run: cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DCDSA_BUILD_BENCHMARKS=ON
 
     - name: Compile CDSA Suite
       run: cmake --build build-bench
 
     - name: Execute Chaos Monkey with Valgrind Memcheck
-      run: |
-        # Find the exact path of the compiled binary dynamically
-        FUZZER_PATH=$(find build-bench -name "bench_fuzzer" -type f | head -n 1)
-        echo "Found fuzzer at: $FUZZER_PATH"
-        
-        # Execute Valgrind on the discovered path
-        valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 $FUZZER_PATH
-
+      # Now that we know exactly where it compiles, we run it straight from the source
+      run: valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./build-bench/bench_fuzzer
