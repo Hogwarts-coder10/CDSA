@@ -26,5 +26,11 @@ jobs:
       run: cmake --build build-bench
 
     - name: Execute Chaos Monkey with Valgrind Memcheck
-      # --error-exitcode=1 forces the CI pipeline to fail if ANY memory leaks are detected
-      run: valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./build-bench/bench_fuzzer
+      run: |
+        # Find the exact path of the compiled binary dynamically
+        FUZZER_PATH=$(find build-bench -name "bench_fuzzer" -type f | head -n 1)
+        echo "Found fuzzer at: $FUZZER_PATH"
+        
+        # Execute Valgrind on the discovered path
+        valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 $FUZZER_PATH
+
