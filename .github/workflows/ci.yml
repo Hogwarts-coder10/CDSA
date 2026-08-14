@@ -1,0 +1,30 @@
+name: CDSA Engine CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  fuzz-and-benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install Build Tools & Valgrind
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake gcc valgrind
+
+    - name: Configure Engine Build
+      run: cmake -B build-bench -DCMAKE_BUILD_TYPE=Release
+
+    - name: Compile CDSA Suite
+      run: cmake --build build-bench
+
+    - name: Execute Chaos Monkey with Valgrind Memcheck
+      # --error-exitcode=1 forces the CI pipeline to fail if ANY memory leaks are detected
+      run: valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./build-bench/bench_fuzzer
