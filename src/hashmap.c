@@ -7,17 +7,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define TOMBSTONE ((char *)-1)
-
 typedef struct {
   char *key;
   void *value;
+  size_t hash; // Catches the original hash to avoid recalculating during evictions 
+  size_t psl;  // Probe Sequence Length (PSL) ("wealth indicator")
 } HashEntry;
 
 struct cdsa_hashmap {
   size_t capacity;
   size_t size;
-  size_t occupied;
+  size_t max_psl; // Cheat code: the highest PSL in the map for early exit on lookups
   size_t version;
   HashEntry *entries;
 };
@@ -34,7 +34,7 @@ cdsa_hashmap *cdsa_create_hashmap(size_t capacity) {
   }
 
   map->size = 0;
-  map->occupied = 0;
+  map->max_psl = 0;
   map->capacity = capacity;
   map->version = 0;
 
@@ -70,47 +70,60 @@ static size_t hash_function(const char *key, size_t capacity) {
   return hash % capacity;
 }
 
+
+
 CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
   if (map == NULL || key == NULL) {
     return CDSA_ERR_INVALID;
   }
 
-  if (map->occupied >= (map->capacity * 3) / 4) {
+  // We only check against map->size now
+  if (map->size >= (map->capacity * 3) / 4) {
     CDSA_STATUS status = resize_hashmap(map);
     if (status != CDSA_OK) {
-      // OOM and couldn't grow. Propagate the error explicitly.
       return status;
     }
   }
 
-  size_t index = hash_function(key, map->capacity);
-  size_t first_tombstone = (size_t)-1; // no tombstone seen yet
+  size_t current_hash = hash_function(key, map->capacity);
+  size_t index = current_hash;
 
-  while (map->entries[index].key != NULL) {
-    if (map->entries[index].key == TOMBSTONE) {
-      if (first_tombstone == (size_t)-1)
-        first_tombstone = index; // remember first reusable slot
-    } else if (strcmp(map->entries[index].key, key) == 0) {
-      map->entries[index].value = value; // update existing key
+  // Create our incoming entry with a starting PSL of 0
+  HashEntry incoming = {(char *)key, value, current_hash, 0};
+
+  while (true) {
+    // Found an empty slot
+    if (map->entries[index].key == NULL) {
+      map->entries[index] = incoming;
+      map->size++;
+      
+      // Update the global max_psl tracker
+      if (incoming.psl > map->max_psl) {
+        map->max_psl = incoming.psl;
+      }
       return CDSA_OK;
     }
+
+    // Update existing key
+    if (strcmp(map->entries[index].key, incoming.key) == 0) {
+      map->entries[index].value = incoming.value;
+      return CDSA_OK;
+    }
+
+    // ROBIN HOOD SWAP: Take from the rich, give to the poor
+    // If the incoming key has traveled further than the resident key, steal the slot
+    if (incoming.psl > map->entries[index].psl) {
+      HashEntry temp = map->entries[index];
+      map->entries[index] = incoming;
+      incoming = temp; // The evicted resident becomes the new incoming key
+    }
+
+    // Move to the next slot and increase the probe sequence length
     index = (index + 1) % map->capacity;
+    incoming.psl++;
   }
-
-  // Prefer reusing a tombstone slot over consuming a fresh NULL slot
-  if (first_tombstone != (size_t)-1) {
-    index = first_tombstone;
-    // occupied unchanged — tombstone was already counted
-  } else {
-    map->occupied++; // claiming a genuinely fresh NULL slot
-  }
-
-  map->entries[index].key = (char *)key;
-  map->entries[index].value = value;
-  map->size++;
-
-  return CDSA_OK;
 }
+
 
 void print_hashmap(cdsa_hashmap *map) {
   if (map == NULL)
@@ -118,7 +131,7 @@ void print_hashmap(cdsa_hashmap *map) {
 
   for (size_t i = 0; i < map->capacity; i++) {
     // THE SHIELD: Only print if it's not NULL and not a TOMBSTONE
-    if (map->entries[i].key != NULL && map->entries[i].key != TOMBSTONE) {
+    if (map->entries[i].key != NULL) {     
       printf("[%zu] %s -> %d\n", i, map->entries[i].key,
              *(int *)map->entries[i].value);
     }
@@ -126,26 +139,25 @@ void print_hashmap(cdsa_hashmap *map) {
 }
 
 void *get_hashmap(cdsa_hashmap *map, const char *key) {
-  if (map == NULL || key == NULL)
+  if (map == NULL || key == NULL) {
     return NULL;
+  }
 
   size_t index = hash_function(key, map->capacity);
+  size_t probe_distance = 0;
 
-  // Probe until we hit an empty slot
-  while (map->entries[index].key != NULL) {
-    // THE SHIELD: We MUST check that the key is NOT a tombstone
-    // BEFORE we allow strcmp to run!
-
-    if (map->entries[index].key != TOMBSTONE &&
-        strcmp(map->entries[index].key, key) == 0) {
+  // THE CHEAT CODE: Stop searching if we've probed further than the map's max_psl
+  while (map->entries[index].key != NULL && probe_distance <= map->max_psl) {
+    
+    if (strcmp(map->entries[index].key, key) == 0) {
       return map->entries[index].value;
     }
 
-    // Otherwise, keep probing
     index = (index + 1) % map->capacity;
+    probe_distance++;
   }
 
-  // If we hit a NULL key, the item doesn't exist
+  // If we hit a NULL or exceeded max_psl, the key definitively does not exist
   return NULL;
 }
 
@@ -177,12 +189,10 @@ CDSA_STATUS resize_hashmap(cdsa_hashmap *map) {
   map->size = 0;
 
   for (size_t i = 0; i < old_capacity; i++) {
-    if (old_entries[i].key != NULL && old_entries[i].key != TOMBSTONE) {
+    if (old_entries[i].key != NULL) {
       insert_hashmap(map, old_entries[i].key, old_entries[i].value);
     }
   }
-
-  map->occupied = map->size; // tombstones are gone after rebuild
 
   CDSA_FREE(old_entries);
   map->version++; // resizing invalidates all active Iterators
@@ -190,27 +200,46 @@ CDSA_STATUS resize_hashmap(cdsa_hashmap *map) {
   return CDSA_OK;
 }
 
+
 CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
-  if (map == NULL || key == NULL)
+  if (map == NULL || key == NULL) {
     return CDSA_ERR_INVALID;
+  }
 
   size_t index = hash_function(key, map->capacity);
+  size_t probe_distance = 0;
 
-  // Probe until we hit a completely empty slot
-  while (map->entries[index].key != NULL) {
-
-    // We must ensure the current slot is NOT a tombstone before checking strcmp
-    if (map->entries[index].key != TOMBSTONE &&
-        strcmp(map->entries[index].key, key) == 0) {
-
-      // Found it! Mark it as a tombstone.
-      map->entries[index].key = TOMBSTONE;
-      map->entries[index].value = NULL;
+  // Search for the key, stopping early if we probe beyond the maximum known PSL
+  while (map->entries[index].key != NULL && probe_distance <= map->max_psl) {
+    
+    if (strcmp(map->entries[index].key, key) == 0) {
+      // Key found! Decrement size immediately.
       map->size--;
+
+      size_t curr = index;
+      size_t next = (curr + 1) % map->capacity;
+
+      // SHIFT BACKWARDS: Pull elements back to fill the void
+      // We only shift if the next element exists AND has been pushed from its ideal slot (psl > 0)
+      while (map->entries[next].key != NULL && map->entries[next].psl > 0) {
+        map->entries[curr] = map->entries[next];
+        map->entries[curr].psl--; // Distance to ideal slot decreased by 1
+        
+        curr = next;
+        next = (curr + 1) % map->capacity;
+      }
+
+      // Clear the final vacated slot completely
+      map->entries[curr].key = NULL;
+      map->entries[curr].value = NULL;
+      map->entries[curr].hash = 0;
+      map->entries[curr].psl = 0;
+
       return CDSA_OK;
     }
 
     index = (index + 1) % map->capacity;
+    probe_distance++;
   }
 
   return CDSA_ERR_NOT_FOUND;
@@ -251,7 +280,7 @@ bool cdsa_has_next_hashmap(cdsa_hashmap_iterator *iter) {
   // Peek ahead to find the next slot that isn't NULL and isn't a TOMBSTONE
   while (iter->current_index < iter->map->capacity) {
     char *key = iter->map->entries[iter->current_index].key;
-    if (key != NULL && key != TOMBSTONE) {
+    if (key != NULL) {
       return true; // Found valid data!
     }
     iter->current_index++;
