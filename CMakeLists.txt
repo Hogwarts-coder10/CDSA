@@ -122,6 +122,10 @@ if(CDSA_BUILD_TESTS)
     add_executable(test_priority_queue tests/test_priority_queue.c)
     target_link_libraries(test_priority_queue PRIVATE cdsa)
 
+    add_executable(test_allocator tests/test_allocator.c)
+    target_link_libraries(test_allocator PRIVATE cdsa)
+
+
     add_executable(test_hashmap_iterator tests/test_hashmap_iterator.c)
     target_link_libraries(test_hashmap_iterator PRIVATE cdsa)
 
