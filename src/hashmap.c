@@ -10,9 +10,9 @@
 typedef struct {
   char *key;
   void *value;
-  size_t
-      hash; // Catches the original hash to avoid recalculating during evictions
-  size_t psl; // Probe Sequence Length (PSL) ("wealth indicator")
+  size_t hash; // Now stores raw integer hash to completely bypass strcmp on
+               // collisions and rehashing on resizes
+  size_t psl;  // Probe Sequence Length (PSL) ("wealth indicator")
 } HashEntry;
 
 struct cdsa_hashmap {
@@ -23,6 +23,11 @@ struct cdsa_hashmap {
   size_t version;
   HashEntry *entries;
 };
+
+// Forward declarations for cross-dependencies
+CDSA_STATUS resize_hashmap(cdsa_hashmap *map);
+static CDSA_STATUS internal_insert(cdsa_hashmap *map, const char *key,
+                                   void *value, size_t raw_hash);
 
 cdsa_hashmap *cdsa_create_hashmap(size_t capacity) {
   cdsa_hashmap *map = CDSA_MALLOC(sizeof(cdsa_hashmap));
@@ -43,7 +48,7 @@ cdsa_hashmap *cdsa_create_hashmap(size_t capacity) {
   map->entries = CDSA_CALLOC(capacity, sizeof(HashEntry));
 
   if (map->entries == NULL) {
-    CDSA_FREE(map); // Fixed here
+    CDSA_FREE(map);
     return NULL;
   }
 
@@ -63,33 +68,21 @@ size_t cdsa_size_hashmap(const cdsa_hashmap *map) {
   return map->size;
 }
 
-static size_t hash_function(const char *key, size_t capacity) {
+// ⚡ Generates the pure hash without the modulo penalty
+static size_t get_raw_hash(const char *key) {
   size_t hash = 0;
   while (*key != '\0') {
     hash = (hash * 31) + *key;
     key++;
   }
-  return hash % capacity;
+  return hash;
 }
 
-CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
-  if (map == NULL || key == NULL) {
-    return CDSA_ERR_INVALID;
-  }
-
-  // We only check against map->size now
-  if (map->size >= (map->capacity * 3) / 4) {
-    CDSA_STATUS status = resize_hashmap(map);
-    if (status != CDSA_OK) {
-      return status;
-    }
-  }
-
-  size_t current_hash = hash_function(key, map->capacity);
-  size_t index = current_hash;
-
-  // Create our incoming entry with a starting PSL of 0
-  HashEntry incoming = {(char *)key, value, current_hash, 0};
+// ⚡ Fast-path insertion that accepts a pre-computed raw hash
+static CDSA_STATUS internal_insert(cdsa_hashmap *map, const char *key,
+                                   void *value, size_t raw_hash) {
+  size_t index = raw_hash % map->capacity;
+  HashEntry incoming = {(char *)key, value, raw_hash, 0};
 
   while (true) {
     // Found an empty slot
@@ -104,25 +97,39 @@ CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
       return CDSA_OK;
     }
 
-    // Update existing key
-    if (strcmp(map->entries[index].key, incoming.key) == 0) {
+    // ⚡ FAST PATH: Integer check before string comparison
+    if (map->entries[index].hash == incoming.hash &&
+        strcmp(map->entries[index].key, incoming.key) == 0) {
       map->entries[index].value = incoming.value;
       return CDSA_OK;
     }
 
-    // ROBIN HOOD SWAP: Take from the rich, give to the poor
-    // If the incoming key has traveled further than the resident key, steal the
-    // slot
+    // ROBIN HOOD SWAP
     if (incoming.psl > map->entries[index].psl) {
       HashEntry temp = map->entries[index];
       map->entries[index] = incoming;
-      incoming = temp; // The evicted resident becomes the new incoming key
+      incoming = temp;
     }
 
-    // Move to the next slot and increase the probe sequence length
     index = (index + 1) % map->capacity;
     incoming.psl++;
   }
+}
+
+CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
+  if (map == NULL || key == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
+  if (map->size >= (map->capacity * 3) / 4) {
+    CDSA_STATUS status = resize_hashmap(map);
+    if (status != CDSA_OK) {
+      return status;
+    }
+  }
+
+  size_t raw_hash = get_raw_hash(key);
+  return internal_insert(map, key, value, raw_hash);
 }
 
 void print_hashmap(cdsa_hashmap *map) {
@@ -130,7 +137,6 @@ void print_hashmap(cdsa_hashmap *map) {
     return;
 
   for (size_t i = 0; i < map->capacity; i++) {
-    // THE SHIELD: Only print if it's not NULL and not a TOMBSTONE
     if (map->entries[i].key != NULL) {
       printf("[%zu] %s -> %d\n", i, map->entries[i].key,
              *(int *)map->entries[i].value);
@@ -143,14 +149,14 @@ void *get_hashmap(cdsa_hashmap *map, const char *key) {
     return NULL;
   }
 
-  size_t index = hash_function(key, map->capacity);
+  size_t raw_hash = get_raw_hash(key);
+  size_t index = raw_hash % map->capacity;
   size_t probe_distance = 0;
 
-  // THE CHEAT CODE: Stop searching if we've probed further than the map's
-  // max_psl
   while (map->entries[index].key != NULL && probe_distance <= map->max_psl) {
-
-    if (strcmp(map->entries[index].key, key) == 0) {
+    // ⚡ FAST PATH: Only run strcmp if the integer hashes collide
+    if (map->entries[index].hash == raw_hash &&
+        strcmp(map->entries[index].key, key) == 0) {
       return map->entries[index].value;
     }
 
@@ -158,13 +164,10 @@ void *get_hashmap(cdsa_hashmap *map, const char *key) {
     probe_distance++;
   }
 
-  // If we hit a NULL or exceeded max_psl, the key definitively does not exist
   return NULL;
 }
 
 bool contains_hashmap(cdsa_hashmap *map, const char *key) {
-  // A simple wrapper: if get_hashmap returns anything other than NULL, it
-  // exists.
   return get_hashmap(map, key) != NULL;
 }
 
@@ -183,20 +186,20 @@ CDSA_STATUS resize_hashmap(cdsa_hashmap *map) {
     return CDSA_ERR_OOM;
   }
 
-  // Swap the new array in BEFORE rehashing, or insert_hashmap below
-  // will see the old capacity/size and immediately re-trigger a resize.
   map->entries = new_entries;
   map->capacity = new_capacity;
   map->size = 0;
 
   for (size_t i = 0; i < old_capacity; i++) {
     if (old_entries[i].key != NULL) {
-      insert_hashmap(map, old_entries[i].key, old_entries[i].value);
+      // ⚡ FAST PATH: Feed cached hash directly to avoid rehashing strings
+      internal_insert(map, old_entries[i].key, old_entries[i].value,
+                      old_entries[i].hash);
     }
   }
 
   CDSA_FREE(old_entries);
-  map->version++; // resizing invalidates all active Iterators
+  map->version++;
   printf("[System] cdsa_hashmap resized to capacity: %zu\n", map->capacity);
   return CDSA_OK;
 }
@@ -206,31 +209,27 @@ CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
     return CDSA_ERR_INVALID;
   }
 
-  size_t index = hash_function(key, map->capacity);
+  size_t raw_hash = get_raw_hash(key);
+  size_t index = raw_hash % map->capacity;
   size_t probe_distance = 0;
 
-  // Search for the key, stopping early if we probe beyond the maximum known PSL
   while (map->entries[index].key != NULL && probe_distance <= map->max_psl) {
-
-    if (strcmp(map->entries[index].key, key) == 0) {
-      // Key found! Decrement size immediately.
+    // ⚡ FAST PATH: Integer check before string comparison
+    if (map->entries[index].hash == raw_hash &&
+        strcmp(map->entries[index].key, key) == 0) {
       map->size--;
 
       size_t curr = index;
       size_t next = (curr + 1) % map->capacity;
 
-      // SHIFT BACKWARDS: Pull elements back to fill the void
-      // We only shift if the next element exists AND has been pushed from its
-      // ideal slot (psl > 0)
       while (map->entries[next].key != NULL && map->entries[next].psl > 0) {
         map->entries[curr] = map->entries[next];
-        map->entries[curr].psl--; // Distance to ideal slot decreased by 1
+        map->entries[curr].psl--;
 
         curr = next;
         next = (curr + 1) % map->capacity;
       }
 
-      // Clear the final vacated slot completely
       map->entries[curr].key = NULL;
       map->entries[curr].value = NULL;
       map->entries[curr].hash = 0;
@@ -276,18 +275,15 @@ bool cdsa_has_next_hashmap(cdsa_hashmap_iterator *iter) {
     return false;
   }
 
-  // WARNING: This function has side effects! It advances current_index
-  // past empty space or tombstones to find the next valid element.
-  // Peek ahead to find the next slot that isn't NULL and isn't a TOMBSTONE
   while (iter->current_index < iter->map->capacity) {
     char *key = iter->map->entries[iter->current_index].key;
     if (key != NULL) {
-      return true; // Found valid data!
+      return true;
     }
     iter->current_index++;
   }
 
-  return false; // Reached the end of the capacity
+  return false;
 }
 
 CDSA_STATUS cdsa_next_hashmap(cdsa_hashmap_iterator *iter, const char **out_key,
@@ -298,20 +294,17 @@ CDSA_STATUS cdsa_next_hashmap(cdsa_hashmap_iterator *iter, const char **out_key,
   if (iter->map->version != iter->snapshot_version) {
     return CDSA_ERR_ITER_INVALIDATED;
   }
-  // has_next automatically advances current_index to the next valid slot
+
   if (!cdsa_has_next_hashmap(iter)) {
     return CDSA_ERR_NOT_FOUND;
   }
 
-  // Extract the data
   *out_key = iter->map->entries[iter->current_index].key;
   if (out_value != NULL) {
     *out_value = iter->map->entries[iter->current_index].value;
   }
 
-  // Advance the index so the next call doesn't read the same element
   iter->current_index++;
-
   return CDSA_OK;
 }
 
