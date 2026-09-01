@@ -45,7 +45,7 @@ int main(void) {
 
   /* Initialize core data structures with correct signatures */
   cdsa_art_tree *art = cdsa_create_art();
-  cdsa_hashmap *map = cdsa_create_hashmap(1024);
+  cdsa_hashmap *map = cdsa_create_hashmap(1000000);
   cdsa_vector *vec = cdsa_create_vector(sizeof(int));
   cdsa_skiplist *list = cdsa_create_skiplist();
   cdsa_priority_queue *pq =

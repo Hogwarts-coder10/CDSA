@@ -52,7 +52,7 @@ void run_advanced_telemetry() {
          (mem_after - mem_before) / (1024.0 * 1024.0));
 
   // --- 2. MIXED WORKLOAD (50% Insert, 50% Search) ---
-  cdsa_hashmap *map = cdsa_create_hashmap(1024);
+  cdsa_hashmap *map = cdsa_create_hashmap(1000000);
   volatile void *val;
   int search_hits = 0;
 

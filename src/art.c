@@ -2,6 +2,7 @@
 #include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +18,14 @@ struct NodeHeader {
   uint32_t prefix_len;
   uint8_t prefix[10];
 };
+
+typedef struct {
+  kpool *pool_node4;
+  kpool *pool_node16;
+  kpool *pool_node48;
+  kpool *pool_node256;
+  kpool *pool_leaf;
+} cdsa_art_slab;
 
 struct Node4 {
   NodeHeader header;
@@ -65,35 +74,77 @@ struct cdsa_art_tree {
   void *root;
   size_t size;
   size_t version;
+  cdsa_art_slab *slab_manager;
 };
+
+// -- SLAB ALLOCATOR --
+
+void art_slab_destroy(cdsa_art_slab *slab) {
+  if (!slab)
+    return;
+
+  // Destroy returns the slabs to the global telemetry tracker
+  kpool_destroy(slab->pool_node4);
+  kpool_destroy(slab->pool_node16);
+  kpool_destroy(slab->pool_node48);
+  kpool_destroy(slab->pool_node256);
+  kpool_destroy(slab->pool_leaf);
+
+  CDSA_FREE(slab);
+}
+
+cdsa_art_slab *art_slab_create(size_t nodes_per_tier) {
+  cdsa_art_slab *slab = CDSA_MALLOC(sizeof(cdsa_art_slab));
+  if (!slab)
+    return NULL;
+
+  // Spinning up 5 independent kpools with exact struct sizes;
+  slab->pool_node4 = kpool_create(sizeof(struct Node4), nodes_per_tier);
+  slab->pool_node16 = kpool_create(sizeof(struct Node16), nodes_per_tier);
+  slab->pool_node48 = kpool_create(sizeof(struct Node48), nodes_per_tier);
+  slab->pool_node256 = kpool_create(sizeof(struct Node256), nodes_per_tier);
+  slab->pool_leaf = kpool_create(sizeof(struct ArtLeaf), nodes_per_tier);
+
+  if (!slab->pool_node4 || !slab->pool_node16 || !slab->pool_node48 ||
+      !slab->pool_node256 || !slab->pool_leaf) {
+    art_slab_destroy(slab);
+    return NULL;
+  }
+
+  return slab;
+}
 
 // --- Node Allocators ---
 
-static Node4 *alloc_node4() {
-  Node4 *node = CDSA_CALLOC(1, sizeof(Node4));
+static Node4 *alloc_node4(cdsa_art_slab *slab) {
+  Node4 *node = (Node4 *)kpool_alloc(slab->pool_node4);
   if (node == NULL) {
     return NULL;
   }
+  memset(node, 0, sizeof(Node4));
   node->header.type = NODE4;
   node->num_children = 0;
   return node;
 }
 
-static Node16 *alloc_node16() {
-  Node16 *node = CDSA_CALLOC(1, sizeof(Node16));
+static Node16 *alloc_node16(cdsa_art_slab *slab) {
+  Node16 *node = (Node16 *)kpool_alloc(slab->pool_node16);
   if (node == NULL) {
     return NULL;
   }
+  memset(node, 0, sizeof(Node16));
   node->header.type = NODE16;
   node->num_children = 0;
   return node;
 }
 
-static Node48 *alloc_node48() {
-  Node48 *node = CDSA_CALLOC(1, sizeof(Node48));
+static Node48 *alloc_node48(cdsa_art_slab *slab) {
+  Node48 *node = (Node48 *)kpool_alloc(slab->pool_node48);
   if (node == NULL) {
     return NULL;
   }
+
+  memset(node, 0, sizeof(Node48));
   node->header.type = NODE48;
 
   // Setting all indices to '255'(empty)
@@ -103,11 +154,12 @@ static Node48 *alloc_node48() {
   return node;
 }
 
-static Node256 *alloc_node256() {
-  Node256 *node = CDSA_CALLOC(1, sizeof(Node256));
+static Node256 *alloc_node256(cdsa_art_slab *slab) {
+  Node256 *node = (Node256 *)kpool_alloc(slab->pool_node256);
   if (node == NULL) {
     return NULL;
   }
+  memset(node, 0, sizeof(Node256));
   node->header.type = NODE256;
   node->num_children = 0;
   return node;
@@ -121,12 +173,13 @@ static char *safe_strdup(const char *s) {
   return dup;
 }
 
-static ArtLeaf *alloc_leaf(const char *key, void *value) {
-  ArtLeaf *leaf = CDSA_CALLOC(1, sizeof(ArtLeaf));
+static ArtLeaf *alloc_leaf(cdsa_art_slab *slab, const char *key, void *value) {
+  ArtLeaf *leaf = (ArtLeaf *)kpool_alloc(slab->pool_leaf);
   if (leaf == NULL) {
     return NULL;
   }
 
+  memset(leaf, 0, sizeof(ArtLeaf));
   leaf->header.type = LEAF_NODE;
   leaf->key = safe_strdup(key);
   if (leaf->key == NULL) {
@@ -155,8 +208,8 @@ static int check_prefix(NodeHeader *header, const char *key, int depth) {
 
 // --- The Adaptive Morphing Engine ---
 
-static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
-  Node16 *new_node = alloc_node16();
+static Node16 *upgrade_node4_to_node16(cdsa_art_slab *slab, Node4 *old_node) {
+  Node16 *new_node = alloc_node16(slab);
   if (new_node == NULL) {
     return NULL;
   }
@@ -172,13 +225,13 @@ static Node16 *upgrade_node4_to_node16(Node4 *old_node) {
   }
 
   // 3. Free the old, small node
-  CDSA_FREE(old_node);
+  kpool_free(slab->pool_node4, old_node);
 
   return new_node;
 }
 
-static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
-  Node48 *new_node = alloc_node48();
+static Node48 *upgrade_node16_to_node48(cdsa_art_slab *slab, Node16 *old_node) {
+  Node48 *new_node = alloc_node48(slab);
 
   if (new_node == NULL) {
     return NULL;
@@ -194,12 +247,13 @@ static Node48 *upgrade_node16_to_node48(Node16 *old_node) {
     new_node->child_index[key_char] = (uint8_t)i;
   }
 
-  CDSA_FREE(old_node);
+  kpool_free(slab->pool_node16, old_node);
   return new_node;
 }
 
-static Node256 *upgrade_node48_to_node256(Node48 *old_node) {
-  Node256 *new_node = alloc_node256();
+static Node256 *upgrade_node48_to_node256(cdsa_art_slab *slab,
+                                          Node48 *old_node) {
+  Node256 *new_node = alloc_node256(slab);
 
   if (new_node == NULL) {
     return NULL;
@@ -215,7 +269,7 @@ static Node256 *upgrade_node48_to_node256(Node48 *old_node) {
     }
   }
 
-  CDSA_FREE(old_node);
+  kpool_free(slab->pool_node48, old_node);
   return new_node;
 }
 
@@ -251,8 +305,7 @@ static void **find_child_node256(Node256 *n, uint8_t c) {
 }
 
 // --- Teardown Helper ---
-
-static void cdsa_free_node(void *node) {
+static void cdsa_free_node(cdsa_art_slab *slab, void *node) {
   if (node == NULL)
     return;
 
@@ -260,24 +313,26 @@ static void cdsa_free_node(void *node) {
 
   if (header->type == LEAF_NODE) {
     ArtLeaf *leaf = (ArtLeaf *)node;
+    // [-] String is dynamically sized; it MUST use standard FREE
     CDSA_FREE(leaf->key);
-    CDSA_FREE(leaf);
+    // [+] The struct is fixed size; return it to the leaf pool drawer
+    kpool_free(slab->pool_leaf, leaf);
   }
 
   else if (header->type == NODE4) {
     Node4 *n = (Node4 *)node;
     for (uint16_t i = 0; i < n->num_children; i++) {
-      cdsa_free_node(n->children[i]);
+      cdsa_free_node(slab, n->children[i]); // [+] Pass slab down
     }
-    CDSA_FREE(n);
+    kpool_free(slab->pool_node4, n); // [+] Route to Node4 pool
   }
 
   else if (header->type == NODE16) {
     Node16 *n = (Node16 *)node;
     for (uint16_t i = 0; i < n->num_children; i++) {
-      cdsa_free_node(n->children[i]);
+      cdsa_free_node(slab, n->children[i]);
     }
-    CDSA_FREE(n);
+    kpool_free(slab->pool_node16, n); // [+] Route to Node16 pool
   }
 
   else if (header->type == NODE48) {
@@ -285,21 +340,20 @@ static void cdsa_free_node(void *node) {
     for (int i = 0; i < 256; i++) {
       uint8_t idx = n->child_index[i];
       if (idx != ART_EMPTY_SLOT) {
-        cdsa_free_node(n->children[idx]);
+        cdsa_free_node(slab, n->children[idx]);
       }
     }
-
-    CDSA_FREE(n);
+    kpool_free(slab->pool_node48, n); // [+] Route to Node48 pool
   }
 
   else if (header->type == NODE256) {
     Node256 *n = (Node256 *)node;
     for (int i = 0; i < 256; i++) {
       if (n->children[i] != NULL) {
-        cdsa_free_node(n->children[i]);
+        cdsa_free_node(slab, n->children[i]);
       }
     }
-    CDSA_FREE(n);
+    kpool_free(slab->pool_node256, n); // [+] Route to Node256 pool
   }
 }
 
@@ -402,8 +456,9 @@ static void print_node_visual(void *node, char edge_char, bool is_last[],
 
 // Downgrade Engines (Shrinkage)
 
-static Node48 *downgrade_node256_to_node48(Node256 *old_node) {
-  Node48 *new_node = alloc_node48();
+static Node48 *downgrade_node256_to_node48(cdsa_art_slab *slab,
+                                           Node256 *old_node) {
+  Node48 *new_node = alloc_node48(slab);
 
   if (new_node == NULL) {
     return NULL;
@@ -420,12 +475,14 @@ static Node48 *downgrade_node256_to_node48(Node256 *old_node) {
       current_idx++;
     }
   }
-  CDSA_FREE(old_node);
+
+  kpool_free(slab->pool_node256, old_node);
   return new_node;
 }
 
-static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
-  Node16 *new_node = alloc_node16();
+static Node16 *downgrade_node48_to_node16(cdsa_art_slab *slab,
+                                          Node48 *old_node) {
+  Node16 *new_node = alloc_node16(slab);
 
   if (new_node == NULL) {
     return NULL;
@@ -444,12 +501,13 @@ static Node16 *downgrade_node48_to_node16(Node48 *old_node) {
       current_idx++;
     }
   }
-  CDSA_FREE(old_node);
+
+  kpool_free(slab->pool_node48, old_node);
   return new_node;
 }
 
-static Node4 *downgrade_node16_to_node4(Node16 *old_node) {
-  Node4 *new_node = alloc_node4();
+static Node4 *downgrade_node16_to_node4(cdsa_art_slab *slab, Node16 *old_node) {
+  Node4 *new_node = alloc_node4(slab);
 
   if (new_node == NULL) {
     return NULL;
@@ -463,7 +521,8 @@ static Node4 *downgrade_node16_to_node4(Node16 *old_node) {
     new_node->keys[i] = old_node->keys[i];
     new_node->children[i] = old_node->children[i];
   }
-  CDSA_FREE(old_node);
+
+  kpool_free(slab->pool_node16, old_node);
   return new_node;
 }
 
@@ -513,11 +572,13 @@ static void remove_child_node256(Node256 *n, uint8_t c) {
 }
 
 // --- 3. Internal Engine: Recursive Deletion & Memory Merging ---
-
 static void *recursive_delete(void *node, const char *key, int depth,
                               bool *deleted, cdsa_art_tree *tree) {
   if (node == NULL)
     return NULL;
+
+  // [+] Extract the slab manager from the tree chassis
+  cdsa_art_slab *slab = tree->slab_manager;
 
   NodeHeader *header = (NodeHeader *)node;
   int key_len = strlen(key);
@@ -527,8 +588,11 @@ static void *recursive_delete(void *node, const char *key, int depth,
     if (strcmp(leaf->key, key) == 0) {
       *deleted = true;
       tree->size--;
-      CDSA_FREE(leaf->key);
-      CDSA_FREE(leaf);
+
+      CDSA_FREE(leaf->key); // Dynamic string key still goes back to the OS
+      kpool_free(slab->pool_leaf,
+                 leaf); // [+] Struct goes safely back to the slab drawer
+
       return NULL;
     }
     return node;
@@ -538,6 +602,7 @@ static void *recursive_delete(void *node, const char *key, int depth,
     int match_len = check_prefix(header, key, depth);
     uint32_t expected_match =
         (header->prefix_len < 10) ? header->prefix_len : 10;
+
     if ((uint32_t)match_len != expected_match)
       return node;
     depth += header->prefix_len;
@@ -562,7 +627,6 @@ static void *recursive_delete(void *node, const char *key, int depth,
     return node;
 
   void *new_child = recursive_delete(*child_ptr, key, depth + 1, deleted, tree);
-
   *child_ptr = new_child;
 
   if (*deleted && new_child == NULL) {
@@ -575,23 +639,24 @@ static void *recursive_delete(void *node, const char *key, int depth,
     else if (header->type == NODE256)
       remove_child_node256((Node256 *)node, c);
 
+    // [+] Pass the slab down to the downgrade engines
     if (header->type == NODE256 && ((Node256 *)node)->num_children == 48) {
-      void *smaller = downgrade_node256_to_node48((Node256 *)node);
-      return smaller ? smaller : node; // OOM: stay as Node256, don't lose data
+      void *smaller = downgrade_node256_to_node48(slab, (Node256 *)node);
+      return smaller ? smaller : node;
     }
     if (header->type == NODE48 && ((Node48 *)node)->num_children == 16) {
-      void *smaller = downgrade_node48_to_node16((Node48 *)node);
-      return smaller ? smaller : node; // OOM: stay as Node48
+      void *smaller = downgrade_node48_to_node16(slab, (Node48 *)node);
+      return smaller ? smaller : node;
     }
     if (header->type == NODE16 && ((Node16 *)node)->num_children == 4) {
-      void *smaller = downgrade_node16_to_node4((Node16 *)node);
-      return smaller ? smaller : node; // OOM: stay as Node16
+      void *smaller = downgrade_node16_to_node4(slab, (Node16 *)node);
+      return smaller ? smaller : node;
     }
 
     if (header->type == NODE4) {
       Node4 *n = (Node4 *)node;
       if (n->num_children == 0) {
-        CDSA_FREE(n);
+        kpool_free(slab->pool_node4, n); // [+] Return empty Node4 to slab
         return NULL;
       }
       if (n->num_children == 1) {
@@ -616,7 +681,7 @@ static void *recursive_delete(void *node, const char *key, int depth,
           memcpy(child_header->prefix, new_prefix, limit);
         }
 
-        CDSA_FREE(n);
+        kpool_free(slab->pool_node4, n); // [+] Return orphaned Node4 to slab
         return surviving_child;
       }
     }
@@ -680,6 +745,12 @@ cdsa_art_tree *cdsa_create_art() {
   if (tree == NULL) {
     return NULL;
   }
+
+  tree->slab_manager = art_slab_create(1024);
+  if (tree->slab_manager == NULL) {
+    CDSA_FREE(tree);
+    return NULL;
+  }
   tree->root = NULL;
   tree->size = 0;
   return tree;
@@ -688,7 +759,8 @@ cdsa_art_tree *cdsa_create_art() {
 void cdsa_free_art(cdsa_art_tree *tree) {
   if (tree == NULL)
     return;
-  cdsa_free_node(tree->root);
+  cdsa_free_node(tree->slab_manager, tree->root);
+  art_slab_destroy(tree->slab_manager);
   CDSA_FREE(tree);
 }
 
@@ -731,8 +803,11 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
     return CDSA_ERR_INVALID;
   }
 
+  // [+] Extract the slab manager from the tree chassis
+  cdsa_art_slab *slab = tree->slab_manager;
+
   if (tree->root == NULL) {
-    tree->root = alloc_leaf(key, value);
+    tree->root = alloc_leaf(slab, key, value); // [+] Pass slab
     if (tree->root == NULL)
       return CDSA_ERR_OOM;
     tree->size++;
@@ -760,7 +835,7 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
         return CDSA_OK;
       }
 
-      Node4 *new_node4 = alloc_node4();
+      Node4 *new_node4 = alloc_node4(slab); // [+] Pass slab
       if (new_node4 == NULL)
         return CDSA_ERR_OOM;
 
@@ -775,9 +850,9 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
       new_node4->children[0] = leaf;
       new_node4->num_children++;
 
-      ArtLeaf *new_leaf = alloc_leaf(key, value);
+      ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
       if (new_leaf == NULL) {
-        CDSA_FREE(new_node4); // don't leak the node4 we just built
+        kpool_free(slab->pool_node4, new_node4); // [+] Safe abort back to slab
         return CDSA_ERR_OOM;
       }
       new_node4->keys[1] = (uint8_t)key[i];
@@ -794,11 +869,8 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
       uint32_t expected_match =
           (header->prefix_len < 10) ? header->prefix_len : 10;
 
-      // -- Optimistic Fix: Fetch a leaf to to verify the rest of the long
-      // prefix
       if ((uint32_t)match_len == expected_match && header->prefix_len > 10) {
         ArtLeaf *leaf = find_minimum_leaf(*current_ptr);
-
         while ((uint32_t)match_len < header->prefix_len &&
                key[depth + match_len] != '\0' &&
                key[depth + match_len] == leaf->key[depth + match_len]) {
@@ -806,35 +878,28 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
         }
       }
 
-      // Now we use the TRUE match_len to determine if we split
       if ((uint32_t)match_len < header->prefix_len) {
-        // Allocate both new nodes BEFORE mutating header->prefix_len so the
-        // tree is never left in a half-modified state on OOM.
-        Node4 *new_node = alloc_node4();
+        Node4 *new_node = alloc_node4(slab); // [+] Pass slab
         if (new_node == NULL)
           return CDSA_ERR_OOM;
 
-        ArtLeaf *new_leaf = alloc_leaf(key, value);
+        ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
         if (new_leaf == NULL) {
-          CDSA_FREE(new_node);
+          kpool_free(slab->pool_node4, new_node); // [+] Safe abort back to slab
           return CDSA_ERR_OOM;
         }
 
         new_node->header.prefix_len = (uint32_t)match_len;
-
         uint32_t save_len = (match_len < 10) ? match_len : 10;
         for (uint32_t p = 0; p < save_len; p++) {
           new_node->header.prefix[p] = (uint8_t)key[depth + p];
         }
 
-        // Fetch the diverging chars from the leaf, as they might not be in our
-        // 10-byte buffer
         ArtLeaf *leaf = find_minimum_leaf(*current_ptr);
         uint8_t old_char = (uint8_t)leaf->key[depth + match_len];
 
         header->prefix_len -= ((uint32_t)match_len + 1);
         uint32_t new_len = (header->prefix_len < 10) ? header->prefix_len : 10;
-
         for (uint32_t p = 0; p < new_len; p++) {
           header->prefix[p] = (uint8_t)leaf->key[depth + match_len + 1 + p];
         }
@@ -854,9 +919,8 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
       }
 
       depth += header->prefix_len;
-      if (depth > key_len) {
+      if (depth > key_len)
         return CDSA_ERR_INVALID;
-      }
     }
 
     uint8_t c = key_bytes[depth];
@@ -868,7 +932,7 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
 
       if (cdsa_next_ptr == NULL) {
         if (n->num_children < 4) {
-          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
           if (new_leaf == NULL)
             return CDSA_ERR_OOM;
           n->keys[n->num_children] = c;
@@ -877,12 +941,12 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
           tree->size++;
           return CDSA_OK;
         } else {
-          Node16 *new_node = upgrade_node4_to_node16(n);
-          if (new_node == NULL) // old Node4 still intact, tree valid
+          Node16 *new_node = upgrade_node4_to_node16(slab, n); // [+] Pass slab
+          if (new_node == NULL)
             return CDSA_ERR_OOM;
           *current_ptr = new_node;
 
-          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
           if (new_leaf == NULL)
             return CDSA_ERR_OOM;
           new_node->keys[new_node->num_children] = c;
@@ -892,15 +956,13 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
           return CDSA_OK;
         }
       }
-    }
-
-    else if (header->type == NODE16) {
+    } else if (header->type == NODE16) {
       Node16 *n = (Node16 *)*current_ptr;
       cdsa_next_ptr = find_child_node16(n, c);
 
       if (cdsa_next_ptr == NULL) {
         if (n->num_children < 16) {
-          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
           if (new_leaf == NULL)
             return CDSA_ERR_OOM;
           n->keys[n->num_children] = c;
@@ -909,12 +971,12 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
           tree->size++;
           return CDSA_OK;
         } else {
-          Node48 *new_node = upgrade_node16_to_node48(n);
-          if (new_node == NULL) // old Node16 still intact
+          Node48 *new_node = upgrade_node16_to_node48(slab, n); // [+] Pass slab
+          if (new_node == NULL)
             return CDSA_ERR_OOM;
           *current_ptr = new_node;
 
-          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
           if (new_leaf == NULL)
             return CDSA_ERR_OOM;
           uint8_t new_index = new_node->num_children;
@@ -926,23 +988,19 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
           return CDSA_OK;
         }
       }
-    }
-
-    else if (header->type == NODE48) {
+    } else if (header->type == NODE48) {
       Node48 *n = (Node48 *)*current_ptr;
       cdsa_next_ptr = find_child_node48(n, c);
 
       if (cdsa_next_ptr == NULL) {
         if (n->num_children < 48) {
-          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
           if (new_leaf == NULL)
             return CDSA_ERR_OOM;
 
-          /* FIXED: Find the first truly empty slot in the children array */
           int free_idx = 0;
-          while (free_idx < 48 && n->children[free_idx] != NULL) {
+          while (free_idx < 48 && n->children[free_idx] != NULL)
             free_idx++;
-          }
 
           n->children[free_idx] = new_leaf;
           n->child_index[c] = (uint8_t)free_idx;
@@ -951,12 +1009,13 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
           return CDSA_OK;
 
         } else {
-          Node256 *new_node = upgrade_node48_to_node256(n);
-          if (new_node == NULL) // old Node48 still intact
+          Node256 *new_node =
+              upgrade_node48_to_node256(slab, n); // [+] Pass slab
+          if (new_node == NULL)
             return CDSA_ERR_OOM;
           *current_ptr = new_node;
 
-          ArtLeaf *new_leaf = alloc_leaf(key, value);
+          ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
           if (new_leaf == NULL)
             return CDSA_ERR_OOM;
           new_node->children[c] = new_leaf;
@@ -965,14 +1024,12 @@ static CDSA_STATUS _insert_art_internal(cdsa_art_tree *tree, const char *key,
           return CDSA_OK;
         }
       }
-    }
-
-    else if (header->type == NODE256) {
+    } else if (header->type == NODE256) {
       Node256 *n = (Node256 *)*current_ptr;
       cdsa_next_ptr = find_child_node256(n, c);
 
       if (*cdsa_next_ptr == NULL) {
-        ArtLeaf *new_leaf = alloc_leaf(key, value);
+        ArtLeaf *new_leaf = alloc_leaf(slab, key, value); // [+] Pass slab
         if (new_leaf == NULL)
           return CDSA_ERR_OOM;
         *cdsa_next_ptr = new_leaf;

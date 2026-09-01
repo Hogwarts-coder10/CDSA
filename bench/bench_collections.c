@@ -64,7 +64,7 @@ void bench_art_search(cdsa_art_tree *tree) {
 // 2. HASHMAP BENCHMARKS
 // ==========================================
 cdsa_hashmap *bench_hashmap_insert(void) {
-  cdsa_hashmap *map = cdsa_create_hashmap(1024);
+  cdsa_hashmap *map = cdsa_create_hashmap(1000000);
   char key[32];
 
   double start = get_time_sec();

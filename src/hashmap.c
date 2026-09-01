@@ -10,14 +10,16 @@
 typedef struct {
   char *key;
   void *value;
-  size_t hash; // Catches the original hash to avoid recalculating during evictions 
-  size_t psl;  // Probe Sequence Length (PSL) ("wealth indicator")
+  size_t
+      hash; // Catches the original hash to avoid recalculating during evictions
+  size_t psl; // Probe Sequence Length (PSL) ("wealth indicator")
 } HashEntry;
 
 struct cdsa_hashmap {
   size_t capacity;
   size_t size;
-  size_t max_psl; // Cheat code: the highest PSL in the map for early exit on lookups
+  size_t max_psl; // Cheat code: the highest PSL in the map for early exit on
+                  // lookups
   size_t version;
   HashEntry *entries;
 };
@@ -70,8 +72,6 @@ static size_t hash_function(const char *key, size_t capacity) {
   return hash % capacity;
 }
 
-
-
 CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
   if (map == NULL || key == NULL) {
     return CDSA_ERR_INVALID;
@@ -96,7 +96,7 @@ CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
     if (map->entries[index].key == NULL) {
       map->entries[index] = incoming;
       map->size++;
-      
+
       // Update the global max_psl tracker
       if (incoming.psl > map->max_psl) {
         map->max_psl = incoming.psl;
@@ -111,7 +111,8 @@ CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
     }
 
     // ROBIN HOOD SWAP: Take from the rich, give to the poor
-    // If the incoming key has traveled further than the resident key, steal the slot
+    // If the incoming key has traveled further than the resident key, steal the
+    // slot
     if (incoming.psl > map->entries[index].psl) {
       HashEntry temp = map->entries[index];
       map->entries[index] = incoming;
@@ -124,14 +125,13 @@ CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
   }
 }
 
-
 void print_hashmap(cdsa_hashmap *map) {
   if (map == NULL)
     return;
 
   for (size_t i = 0; i < map->capacity; i++) {
     // THE SHIELD: Only print if it's not NULL and not a TOMBSTONE
-    if (map->entries[i].key != NULL) {     
+    if (map->entries[i].key != NULL) {
       printf("[%zu] %s -> %d\n", i, map->entries[i].key,
              *(int *)map->entries[i].value);
     }
@@ -146,9 +146,10 @@ void *get_hashmap(cdsa_hashmap *map, const char *key) {
   size_t index = hash_function(key, map->capacity);
   size_t probe_distance = 0;
 
-  // THE CHEAT CODE: Stop searching if we've probed further than the map's max_psl
+  // THE CHEAT CODE: Stop searching if we've probed further than the map's
+  // max_psl
   while (map->entries[index].key != NULL && probe_distance <= map->max_psl) {
-    
+
     if (strcmp(map->entries[index].key, key) == 0) {
       return map->entries[index].value;
     }
@@ -200,7 +201,6 @@ CDSA_STATUS resize_hashmap(cdsa_hashmap *map) {
   return CDSA_OK;
 }
 
-
 CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
   if (map == NULL || key == NULL) {
     return CDSA_ERR_INVALID;
@@ -211,7 +211,7 @@ CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
 
   // Search for the key, stopping early if we probe beyond the maximum known PSL
   while (map->entries[index].key != NULL && probe_distance <= map->max_psl) {
-    
+
     if (strcmp(map->entries[index].key, key) == 0) {
       // Key found! Decrement size immediately.
       map->size--;
@@ -220,11 +220,12 @@ CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
       size_t next = (curr + 1) % map->capacity;
 
       // SHIFT BACKWARDS: Pull elements back to fill the void
-      // We only shift if the next element exists AND has been pushed from its ideal slot (psl > 0)
+      // We only shift if the next element exists AND has been pushed from its
+      // ideal slot (psl > 0)
       while (map->entries[next].key != NULL && map->entries[next].psl > 0) {
         map->entries[curr] = map->entries[next];
         map->entries[curr].psl--; // Distance to ideal slot decreased by 1
-        
+
         curr = next;
         next = (curr + 1) % map->capacity;
       }
