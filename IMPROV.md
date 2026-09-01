@@ -1,6 +1,6 @@
 # ⚙️ CDSA — Core Data Structures & Algorithms Library for Kedis-C
 
-> “Before building the engine, build the components that power it.”
+> "Before building the engine, build the components that power it."
 
 CDSA is a custom-built Data Structures & Algorithms library written in pure C that serves as the foundational infrastructure layer for:
 
@@ -58,159 +58,84 @@ It is intended to become the internal infrastructure toolkit powering:
 Kedis-C
 ```
 
-Future integrations include:
+Planned integrations include:
 
-| CDSA Component     | Kedis-C Usage                       |
-| ------------------ | ----------------------------------- |
-| Vector             | Dynamic storage buffers             |
-| HashMap            | Keyspace engine                     |
-| KString            | Protocol parsing & command handling |
-| Stack              | Internal operation handling         |
-| Skiplist (Planned) | Ordered indexes / sorted sets       |
-| Queue (Planned)    | Request scheduling                  |
-| Trees (Planned)    | Retrieval & indexing systems        |
+| CDSA Component        | Kedis-C Usage                           |
+| ---------------------- | ---------------------------------------- |
+| Vector                  | Dynamic storage buffers                  |
+| HashMap                 | Keyspace engine                          |
+| KString                 | Protocol parsing & command handling      |
+| Stack / Queue / Deque   | Internal operation handling & scheduling |
+| SkipList                | Ordered indexes / sorted sets            |
+| ART                     | Retrieval & prefix-indexed lookups       |
+| `cdsa_arena` / `kpool`  | Allocation strategy for hot-path objects |
 
 ---
 
 # 🚀 Current Implementations
 
+CDSA now has **11 core containers**, all generic (`void*`-backed), all with dedicated unit tests, and most with their own mutation-safe iterators.
+
 ## 📦 Vector
-
-A generic dynamically resizing array implementation.
-
-### Features
-
-* Generic element storage using `void *`
-* Dynamic resizing
-* Random access
-* Front/Back operations
-* Memory-safe resizing logic
-
-### Systems Concepts
-
-* Pointer arithmetic
-* Heap memory management
-* Generic abstraction design
-* Capacity growth strategies
-
----
+Generic dynamically resizing array. Random access, front/back operations, capacity growth strategy, iterator support.
 
 ## 🔗 Linked List
-
-A singly linked list implementation.
-
-### Features
-
-* Push front
-* Pop front
-* Traversal
-* Size tracking
-* Memory cleanup
-
-### Systems Concepts
-
-* Dynamic node allocation
-* Pointer traversal
-* Linked memory structures
-
----
+Generic singly linked list. Push/pop front, traversal, size tracking, safe payload teardown, iterator support.
 
 ## 🧱 Stack
-
-A stack abstraction built on top of the vector implementation.
-
-### Features
-
-* Push
-* Pop
-* Top access
-* Size tracking
-* Empty checking
-
-### Systems Concepts
-
-* Abstraction layering
-* Internal container reuse
-* Systems-oriented composition
-
----
+Generic LIFO container, layered on top of Vector.
 
 ## 🧵 KString
+Dynamic, auto-expanding string implementation. Append operations, capacity tracking, null-terminated compatibility.
 
-A custom dynamic string implementation.
+## 🚦 Queue
+Generic FIFO container.
 
-### Features
+## ⏫ Deque
+Double-ended queue for O(1) head/tail push and pop.
 
-* Dynamic resizing
-* String append operations
-* Capacity tracking
-* Null-terminated compatibility
+## 🔁 RingBuffer
+Fixed-capacity circular buffer for bounded producer/consumer workloads. Includes its own iterator.
 
-### Systems Concepts
+## 🏔️ Priority Queue
+Generic Min/Max heap backed by Vector.
 
-* Buffer management
-* String memory handling
-* Reallocation strategies
+## 🗂️ HashMap
+Open-addressing hash table using **Robin Hood hashing** (probe-sequence-length tracking + backward-shift deletion — no tombstones). Auto-resizes at 75% load factor. Includes a mutation-safe iterator guarded by a snapshot version counter.
 
----
+## 🪜 SkipList
+Probabilistic O(log N) alternative to balanced trees, used as the basis for future sorted-set support in Kedis-C. Includes an iterator (currently unguarded against concurrent mutation — see Known Limitations).
 
-## 🗂️ HashMap (WIP)
+## 🌳 Adaptive Radix Tree (ART)
+High-performance prefix tree with dynamic node morphing (Node4 → Node16 → Node48 → Node256), path compression, and prefix gluing. Node allocation is routed through `kpool` slab allocators rather than raw `malloc`/`free` per node. Includes its own iterator.
 
-A foundational hashmap implementation intended to power future Kedis-C keyspace storage.
-
-### Planned Features
-
-* Hash functions
-* Collision handling
-* Rehashing
-* Key lookup
-* Deletion support
-
----
-
-# 🏎️ Long-Term Goal
-
-The long-term vision is to evolve CDSA into a reusable low-level systems toolkit for:
-
-* database engines,
-* retrieval systems,
-* AI infrastructure,
-* vector indexing,
-* and systems-oriented experimentation.
+## 🧮 Allocator Layer
+* **`cdsa_arena`** — bump allocator with 8-byte alignment, `arena_alloc`/`arena_reset`/`arena_destroy`.
+* **`kpool`** — fixed-size slab/free-list allocator, currently used internally by ART for all node classes.
+* **`CDSA_STATUS`** — unified error enum (`CDSA_OK`, `CDSA_ERR_OOM`, `CDSA_ERR_NOT_FOUND`, `CDSA_ERR_EXISTS`, `CDSA_ERR_INVALID`, `CDSA_ERR_FULL`, `CDSA_ERR_EMPTY`, `CDSA_ERR_ITER_INVALIDATED`) with `cdsa_strerror()`.
+* Allocation is routed through `CDSA_MALLOC` / `CDSA_CALLOC` / `CDSA_REALLOC` / `CDSA_FREE` macros so the whole library can be repointed at a custom allocator later (e.g. `kalloc`, still planned).
 
 ---
 
-# 🧠 Philosophy
+# 📈 Performance
 
-Most DSA learning focuses on:
+Benchmarked against the C++ STL on 1,000,000 operations with randomized UUID-like keys (`-O3`, GCC). Full methodology and raw numbers in [`docs/BENCHMARKS.md`](docs/BENCHMARKS.md).
 
-```text
-solving interview questions
-```
+| Workload | CDSA | STL Baseline | Result |
+| --- | --- | --- | --- |
+| HashMap, preallocated | 8.43M ops/sec | `std::unordered_map`: 4.88M ops/sec | ~1.73x faster |
+| HashMap, dynamic growth (11 resizes) | 4.15M ops/sec | `std::unordered_map`: 2.74M ops/sec | ~1.51x faster |
+| Ordered index (ART vs. Red-Black Tree) | 2.66M ops/sec | `std::map`: 1.21M ops/sec | ~2.20x faster |
 
-CDSA focuses on:
+ART sustains ~84.29 MB heap usage for 1,000,000 uncompressible 32-byte keys. HashMap sustains up to 7.4M ops/sec under a mixed 50/50 read/write workload.
 
-```text
-understanding how systems are built underneath
-```
+---
 
-The goal is not only to:
+# 🛡️ Memory Safety
 
-```text
-use abstractions
-```
+Every structure is stress-tested with a randomized chaos-monkey fuzzer (`bench/bench_fuzzer.c`) under Valgrind Memcheck, and the allocator layer can be built with AddressSanitizer + UndefinedBehaviorSanitizer via the `CDSA_USE_SANITIZERS` CMake option. GitHub Actions CI runs the fuzzer under Valgrind on every push and pull request.
 
-but to:
-
-```text
-build abstractions
-```
-
-that can power larger systems like:
-
-```text
-Kedis-C
-```
+**Known limitation:** the fuzzer and CI currently catch memory-safety regressions (leaks, use-after-free, invalid access) but do **not** run the correctness unit tests (`tests/test_*.c`) in CI — those still need `add_test()` registration and a CI step. See [`CDSA_REVIEW_ISSUES.md`](CDSA_REVIEW_ISSUES.md) for the current punch list, including this and the skiplist iterator's missing mutation guard.
 
 ---
 
@@ -224,22 +149,58 @@ CDSA/
 │       ├── linkedlist.h
 │       ├── stack.h
 │       ├── kstring.h
-│       └── hashmap.h
+│       ├── queue.h
+│       ├── deque.h
+│       ├── ringbuffer.h
+│       ├── priority_queue.h
+│       ├── hashmap.h
+│       ├── skiplist.h
+│       ├── art.h
+│       ├── allocator.h
+│       └── error.h
 │
 ├── src/
 │   ├── vector.c
 │   ├── linkedlist.c
 │   ├── stack.c
 │   ├── kstring.c
-│   └── hashmap.c
+│   ├── queue.c
+│   ├── deque.c
+│   ├── ringbuffer.c
+│   ├── priority_queue.c
+│   ├── hashmap.c
+│   ├── skiplist.c
+│   ├── art.c
+│   ├── allocator.c
+│   └── error.c
 │
 ├── tests/
-│   ├── test_vector.c
-│   ├── test_linkedlist.c
+│   ├── test_vector.c / test_vector_iterator.c
+│   ├── test_linkedlist.c / test_linkedlist_iterator.c
 │   ├── test_stack.c
 │   ├── test_kstring.c
-│   └── test_hashmap.c
+│   ├── test_queue.c
+│   ├── test_deque.c
+│   ├── test_ringbuffer.c / test_ringbuffer_iterator.c
+│   ├── test_priority_queue.c
+│   ├── test_hashmap.c / test_hashmap_iterator.c
+│   ├── test_skiplist.c / test_skiplist_iterator.c
+│   ├── test_art.c / test_art_iterator.c
+│   ├── test_allocator.c
+│   └── test_wrappers_iterators.c
 │
+├── bench/
+│   ├── bench_collections.c
+│   ├── bench_workloads.c
+│   ├── bench_stl_baseline.cpp
+│   └── bench_fuzzer.c
+│
+├── docs/
+│   └── BENCHMARKS.md
+│
+├── .github/workflows/ci.yml
+├── CONTRIBUTING.md
+├── ROADMAP.md
 └── CMakeLists.txt
 ```
 
@@ -248,61 +209,48 @@ CDSA/
 # 🔨 Build Instructions
 
 ## Requirements
-
 * GCC / Clang
 * CMake 3.20+
 
----
-
 ## Build
-
 ```bash
 mkdir build
 cd build
-
 cmake ..
 make
 ```
 
----
-
-## Run Tests
-
-Example:
-
+## Build with sanitizers
 ```bash
-./test_vector
-./test_stack
-./test_kstring
+cmake -B build-san -DCDSA_USE_SANITIZERS=ON
+cmake --build build-san
 ```
 
+## Build with benchmarks / fuzzer
+```bash
+cmake -B build-bench -DCMAKE_BUILD_TYPE=Release -DCDSA_BUILD_BENCHMARKS=ON
+cmake --build build-bench
+./build-bench/bench_fuzzer
+```
+
+## Run tests
+Each test compiles to its own executable, e.g.:
+```bash
+./build/test_vector
+./build/test_hashmap
+./build/test_skiplist_iterator
+```
+(Not yet wired into `ctest` — run the binaries directly for now.)
+
 ---
 
-# 🚀 Planned Implementations
+# 🚀 Planned / In Progress
 
-## Core Structures
-
-* Queue
-* Deque
-* Binary Search Tree
-* AVL Tree
-* Red-Black Tree
-* Skiplist
-* Trie
-* Graph
-* Heap
-
----
-
-## Systems Improvements
-
-* Arena allocators
-* Iterators
-* Better memory safety
-* Benchmark suite
-* Performance profiling
-* Generic macros
-* Internal debugging utilities
+* `kalloc` integration (custom global allocator backing `CDSA_MALLOC`/`CDSA_FREE`)
+* Wiring `add_test()` + `ctest` into CI so correctness regressions, not just crashes/leaks, fail the build
+* Mutation guard for the SkipList iterator (matching the HashMap iterator's version-check pattern)
+* `cdsa_*` namespace rename across all modules
+* Trie, Graph, and general tree structures (BST/AVL/Red-Black) as needed by future Kedis-C features
 
 ---
 
