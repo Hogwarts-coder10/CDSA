@@ -1,29 +1,29 @@
 # Phase 1 (Required before Kedis-C)
 
-- [ ] Allocation failure handling
-- [ ] Ownership semantics documentation
-- [ ] Allocator abstraction
-- [ ] Error codes
-- [ ] Public header cleanup
+- [x] Allocation failure handling
+- [x] Ownership semantics documentation
+- [x] Allocator abstraction
+- [x] Error codes
+- [x] Public header cleanup
 
 # Phase 2
 
-- [ ] Opaque public types
-- [ ] cdsa_* namespace
-- [ ] Const correctness
-- [ ] Iterator API
-- [ ] Optional CMake targets
+- [x] Opaque public types
+- [x] cdsa_* namespace
+- [x] Const correctness
+- [x] Iterator API
+- [x] Optional CMake targets
 
 # Phase 3
 
-- [ ] Benchmarks
-- [ ] Fuzz testing
-- [ ] Sanitizers
-- [ ] CI
-- [ ] Robin Hood Hashing (optional)
+- [x] Benchmarks
+- [x] Fuzz testing
+- [x] Sanitizers
+- [x] CI
+- [x] Robin Hood Hashing (optional)
 
 # Future
 
-- [ ] kalloc integration
-- [ ] Arena allocator
-- [ ] Memory pool
+- [x] kalloc integration
+- [x] Arena allocator
+- [x] Memory pool
