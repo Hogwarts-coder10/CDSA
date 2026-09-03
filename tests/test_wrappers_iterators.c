@@ -88,12 +88,11 @@ bool compare_ints_max(void *a, void *b) {
 void test_priority_queue_iterator() {
   printf("--- Testing Priority cdsa_queue Iterator ---\n");
 
-  // Updated to use cdsa_create_pq and its 2-argument signature[cite: 7]
   cdsa_priority_queue *pq = cdsa_create_pq(sizeof(int), compare_ints_max);
 
   int vals[] = {15, 30, 5, 20};
   for (int i = 0; i < 4; i++) {
-    cdsa_push_pq(pq, &vals[i]); // Updated to use cdsa_push_pq[cite: 7]
+    cdsa_push_pq(pq, &vals[i]);
   }
 
   cdsa_priority_queue_iterator *iter = cdsa_create_priority_queue_iterator(pq);
@@ -111,12 +110,13 @@ void test_priority_queue_iterator() {
 
   // Mutation Guard Test
   int extra = 50;
-  cdsa_push_pq(pq, &extra); // Updated to use cdsa_push_pq[cite: 7]
+  cdsa_push_pq(pq, &extra);
   assert(cdsa_has_next_priority_queue(iter) == false);
-  assert(cdsa_next_priority_queue(iter, &value_ptr) == CDSA_ERR_ITER_INVALIDATED);
+  assert(cdsa_next_priority_queue(iter, &value_ptr) ==
+         CDSA_ERR_ITER_INVALIDATED);
 
   cdsa_free_priority_queue_iterator(iter);
-  cdsa_free_pq(pq); // Updated to use cdsa_free_pq[cite: 7]
+  cdsa_free_pq(pq);
   printf("Priority cdsa_queue Iterator: PASS\n\n");
 }
 
