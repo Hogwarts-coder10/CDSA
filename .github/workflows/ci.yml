@@ -29,3 +29,9 @@ jobs:
     - name: Execute Chaos Monkey with Valgrind Memcheck
       # Now that we know exactly where it compiles, we run it straight from the source
       run: valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./build-bench/bench_fuzzer
+
+    - name: Run Unit Tests (CTests)
+      run: cd build-bench && ctest --output-on-failure
+      env:
+        CDSA_USE_SANITIZERS: ON
+

@@ -124,7 +124,9 @@ if(CDSA_BUILD_TESTS)
 
     add_executable(test_allocator tests/test_allocator.c)
     target_link_libraries(test_allocator PRIVATE cdsa)
-
+      
+    add_executable(test_kpool tests/test_kpool.c)
+    target_link_libraries(test_kpool PRIVATE cdsa)
 
     add_executable(test_hashmap_iterator tests/test_hashmap_iterator.c)
     target_link_libraries(test_hashmap_iterator PRIVATE cdsa)
@@ -147,6 +149,35 @@ if(CDSA_BUILD_TESTS)
     add_executable(test_art_iterator tests/test_art_iterator.c)
     target_link_libraries(test_art_iterator PRIVATE cdsa)
 endif()
+
+# Enable CTest infrastructure
+enable_testing()
+
+# Core Allocators
+add_test(NAME test_allocator COMMAND test_allocator)
+add_test(NAME test_kpool COMMAND test_kpool)
+
+# Data Structures
+add_test(NAME test_art COMMAND test_art)
+add_test(NAME test_deque COMMAND test_deque)
+add_test(NAME test_hashmap COMMAND test_hashmap)
+add_test(NAME test_kstring COMMAND test_kstring)
+add_test(NAME test_linkedlist COMMAND test_linkedlist)
+add_test(NAME test_priority_queue COMMAND test_priority_queue)
+add_test(NAME test_queue COMMAND test_queue)
+add_test(NAME test_ringbuffer COMMAND test_ringbuffer)
+add_test(NAME test_skiplist COMMAND test_skiplist)
+add_test(NAME test_stack COMMAND test_stack)
+add_test(NAME test_vector COMMAND test_vector)
+
+# Iterators & Wrappers
+add_test(NAME test_art_iterator COMMAND test_art_iterator)
+add_test(NAME test_hashmap_iterator COMMAND test_hashmap_iterator)
+add_test(NAME test_linkedlist_iterator COMMAND test_linkedlist_iterator)
+add_test(NAME test_ringbuffer_iterator COMMAND test_ringbuffer_iterator)
+add_test(NAME test_skiplist_iterator COMMAND test_skiplist_iterator)
+add_test(NAME test_vector_iterator COMMAND test_vector_iterator)
+add_test(NAME test_wrappers_iterators COMMAND test_wrappers_iterators)
 
 # ==========================================
 # ====== SYSTEM-WIDE INSTALLATION ==========
