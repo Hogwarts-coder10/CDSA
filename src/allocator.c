@@ -97,6 +97,7 @@ kpool *kpool_create(size_t block_size, size_t capacity) {
   pool->memory_block = CDSA_MALLOC(block_size * capacity);
   if (!pool->memory_block) {
     CDSA_FREE(pool->memory_block);
+    CDSA_FREE(pool);
     return NULL;
   }
 
@@ -177,9 +178,7 @@ struct cdsa_arena {
 };
 
 // Helper macro to align memory addresses (usually to 8 bytes)
-#define ALIGN_FORWARD(ptr, align)                                              \
-  ((uintptr_t)(ptr) + ((align) - 1)) & ~((align) - 1)
-
+#define ALIGN_FORWARD(x, align) (((size_t)(x) + ((align) - 1)) & ~((align) - 1))
 cdsa_arena *arena_create(size_t capacity) {
   if (capacity == 0)
     return NULL;
