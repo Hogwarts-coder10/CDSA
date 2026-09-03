@@ -1,3 +1,4 @@
+#include "CDSA/allocator.h"
 #include "CDSA/error.h"
 #define _POSIX_C_SOURCE 200809L
 #include "CDSA/skiplist.h"
@@ -68,7 +69,7 @@ static void test_delete_existing() {
   assert(range_contains(r, count, "alice") == 1);
   assert(range_contains(r, count, "charlie") == 1);
   assert(range_contains(r, count, "bob") == 0);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   cdsa_free_skiplist(sl);
   printf("    PASS\n");
@@ -103,7 +104,7 @@ static void test_delete_then_reinsert() {
   char **r = get_range_skiplist(sl, 0.0, 5.0, &count);
   assert(count == 1);
   assert(strcmp(r[0], "ping") == 0);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   cdsa_free_skiplist(sl);
   printf("    PASS\n");
@@ -129,7 +130,7 @@ static void test_tied_scores_alphabetical_order() {
   assert(strcmp(r[1], "Bob") == 0);
   assert(strcmp(r[2], "Charlie") == 0);
   assert(strcmp(r[3], "Karthik") == 0);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   cdsa_free_skiplist(sl);
   printf("    PASS\n");
@@ -147,7 +148,7 @@ static void test_range_query_basic() {
   char **r = get_range_skiplist(sl, 200.0, 800.0, &count);
   assert(count == 1);
   assert(strcmp(r[0], "mid") == 0);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   cdsa_free_skiplist(sl);
   printf("    PASS\n");
@@ -165,13 +166,13 @@ static void test_range_query_inclusive_bounds() {
   int count = 0;
   char **r = get_range_skiplist(sl, 1.0, 3.0, &count);
   assert(count == 3);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   // single point
   r = get_range_skiplist(sl, 2.0, 2.0, &count);
   assert(count == 1);
   assert(strcmp(r[0], "b") == 0);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   cdsa_free_skiplist(sl);
   printf("    PASS\n");
@@ -208,7 +209,7 @@ static void test_range_query_all() {
   assert(count == 5);
   assert(strcmp(r[0], "a") == 0);
   assert(strcmp(r[4], "e") == 0);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   cdsa_free_skiplist(sl);
   printf("    PASS\n");
@@ -277,7 +278,7 @@ static void test_range_caller_owns_strings() {
   // The node inside the skiplist still has "original" so deletion still works
   assert(remove_skiplist(sl, 1.0, "original") == CDSA_OK);
 
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
   cdsa_free_skiplist(sl);
   printf("    PASS\n");
 }
@@ -297,7 +298,7 @@ static void test_kedis_style_namespaced_keys() {
   assert(count == 2);
   assert(range_contains(r, count, "session:user:12345:auth_token") == 1);
   assert(range_contains(r, count, "session:user:12345:refresh_token") == 1);
-  cdsa_free_range(r, count);
+  CDSA_FREE(r);
 
   assert(remove_skiplist(sl, 1.0, "session:user:12345:auth_token") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 2);

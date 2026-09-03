@@ -17,6 +17,7 @@ struct cdsa_skiplist {
   SkipNode *header; // starting node (dummy)
   int level;        // current highest level in use
   size_t size;      // total number of items
+  size_t version;   // Mutation Counter
 };
 
 // --- Internal Helpers ---
@@ -74,7 +75,7 @@ cdsa_skiplist *cdsa_create_skiplist() {
   }
   sl->level = 1;
   sl->size = 0;
-
+  sl->version = 0;
   // The Dummy Header sits at max level but holds no real data
   sl->header = cdsa_create_node(SKIPLIST_MAX_LEVEL, 0.0, "");
 
@@ -167,6 +168,7 @@ CDSA_STATUS insert_skiplist(cdsa_skiplist *sl, double score,
   }
 
   sl->size++;
+  sl->version++;
   return CDSA_OK;
 }
 
@@ -221,6 +223,7 @@ CDSA_STATUS remove_skiplist(cdsa_skiplist *sl, double score,
     CDSA_FREE(current);
 
     sl->size--;
+    sl->version++;
     return CDSA_OK; // Successfully deleted
   }
 
@@ -290,6 +293,7 @@ char **get_range_skiplist(cdsa_skiplist *sl, double min_score, double max_score,
 struct cdsa_skiplist_iterator {
   const cdsa_skiplist *sl;
   SkipNode *current;
+  size_t snapshot_version;
 };
 
 cdsa_skiplist_iterator *cdsa_create_skiplist_iterator(const cdsa_skiplist *sl) {
@@ -303,6 +307,7 @@ cdsa_skiplist_iterator *cdsa_create_skiplist_iterator(const cdsa_skiplist *sl) {
   iter->sl = sl;
   // Level 0 of the header points to the first actual node in the list
   iter->current = sl->header->forward[0];
+  iter->snapshot_version = sl->version;
 
   return iter;
 }
@@ -310,6 +315,11 @@ cdsa_skiplist_iterator *cdsa_create_skiplist_iterator(const cdsa_skiplist *sl) {
 bool cdsa_has_next_skiplist(cdsa_skiplist_iterator *iter) {
   if (iter == NULL)
     return false;
+
+  // ⚡ Shield against use-after-free
+  if (iter->sl->version != iter->snapshot_version) {
+    return false;
+  }
   return iter->current != NULL;
 }
 
@@ -317,6 +327,11 @@ CDSA_STATUS cdsa_next_skiplist(cdsa_skiplist_iterator *iter, double *out_score,
                                const char **out_value) {
   if (iter == NULL || iter->current == NULL) {
     return CDSA_ERR_NOT_FOUND;
+  }
+
+  // ⚡ Shield against use-after-free
+  if (iter->sl->version != iter->snapshot_version) {
+    return CDSA_ERR_ITER_INVALIDATED;
   }
 
   // Extract the data safely
