@@ -13,7 +13,7 @@ void test_queue_iterator() {
   cdsa_queue *q = cdsa_create_queue(10, sizeof(int));
 
   for (int i = 1; i <= 3; i++) {
-    cdsa_enqueue(q, &i); // Updated to use cdsa_enqueue[cite: 6]
+    cdsa_enqueue(q, &i);
   }
 
   cdsa_queue_iterator *iter = cdsa_create_queue_iterator(q);
@@ -22,7 +22,8 @@ void test_queue_iterator() {
   int count = 0;
 
   while (cdsa_has_next_queue(iter)) {
-    assert(cdsa_next_queue(iter, &value_ptr) == CDSA_OK);
+    int status = cdsa_next_queue(iter, &value_ptr);
+    assert(status == CDSA_OK);
     int val = *(int *)value_ptr;
     printf("  cdsa_queue Element: %d (Expected: %d)\n", val, expected[count]);
     assert(val == expected[count]);
@@ -32,9 +33,11 @@ void test_queue_iterator() {
 
   // Mutation Guard Test
   int extra = 99;
-  cdsa_enqueue(q, &extra); // Updated to use cdsa_enqueue[cite: 6]
-  assert(cdsa_has_next_queue(iter) == false);
-  assert(cdsa_next_queue(iter, &value_ptr) == CDSA_ERR_ITER_INVALIDATED);
+  cdsa_enqueue(q, &extra);
+  bool has_next = cdsa_has_next_queue(iter);
+  assert(has_next == false);
+  int mut_status = cdsa_next_queue(iter, &value_ptr);
+  assert(mut_status == CDSA_ERR_ITER_INVALIDATED);
 
   cdsa_free_queue_iterator(iter);
   cdsa_free_queue(q);
@@ -47,7 +50,6 @@ void test_deque_iterator() {
 
   cdsa_deque *d = cdsa_create_deque(10, sizeof(int));
 
-  // Push to front and back to test iteration order
   int v1 = 20, v2 = 10, v3 = 30;
   cdsa_push_back_deque(d, &v1);
   cdsa_push_front_deque(d, &v2);
@@ -59,7 +61,8 @@ void test_deque_iterator() {
   int count = 0;
 
   while (cdsa_has_next_deque(iter)) {
-    assert(cdsa_next_deque(iter, &value_ptr) == CDSA_OK);
+    int status = cdsa_next_deque(iter, &value_ptr);
+    assert(status == CDSA_OK);
     int val = *(int *)value_ptr;
     printf("  cdsa_deque Element: %d (Expected: %d)\n", val, expected[count]);
     assert(val == expected[count]);
@@ -69,8 +72,10 @@ void test_deque_iterator() {
 
   // Mutation Guard Test
   cdsa_pop_front_deque(d);
-  assert(cdsa_has_next_deque(iter) == false);
-  assert(cdsa_next_deque(iter, &value_ptr) == CDSA_ERR_ITER_INVALIDATED);
+  bool has_next = cdsa_has_next_deque(iter);
+  assert(has_next == false);
+  int mut_status = cdsa_next_deque(iter, &value_ptr);
+  assert(mut_status == CDSA_ERR_ITER_INVALIDATED);
 
   cdsa_free_deque_iterator(iter);
   cdsa_free_deque(d);
@@ -78,7 +83,6 @@ void test_deque_iterator() {
 }
 
 // --- 3. Priority cdsa_queue Test ---
-// Updated to match PriorityCompareFn which returns bool[cite: 7]
 bool compare_ints_max(void *a, void *b) {
   int int_a = *(int *)a;
   int int_b = *(int *)b;
@@ -101,7 +105,8 @@ void test_priority_queue_iterator() {
 
   printf("  Iterating underlying heap array level-order:\n");
   while (cdsa_has_next_priority_queue(iter)) {
-    assert(cdsa_next_priority_queue(iter, &value_ptr) == CDSA_OK);
+    int status = cdsa_next_priority_queue(iter, &value_ptr);
+    assert(status == CDSA_OK);
     int val = *(int *)value_ptr;
     printf("  PQ Element: %d\n", val);
     count++;
@@ -111,9 +116,10 @@ void test_priority_queue_iterator() {
   // Mutation Guard Test
   int extra = 50;
   cdsa_push_pq(pq, &extra);
-  assert(cdsa_has_next_priority_queue(iter) == false);
-  assert(cdsa_next_priority_queue(iter, &value_ptr) ==
-         CDSA_ERR_ITER_INVALIDATED);
+  bool has_next = cdsa_has_next_priority_queue(iter);
+  assert(has_next == false);
+  int mut_status = cdsa_next_priority_queue(iter, &value_ptr);
+  assert(mut_status == CDSA_ERR_ITER_INVALIDATED);
 
   cdsa_free_priority_queue_iterator(iter);
   cdsa_free_pq(pq);
