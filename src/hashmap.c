@@ -116,6 +116,18 @@ static CDSA_STATUS internal_insert(cdsa_hashmap *map, const char *key,
   }
 }
 
+static void recalculate_max_psl(cdsa_hashmap *map) {
+  size_t new_max = 0;
+  for (size_t i = 0; i < map->capacity; i++) {
+    // Assuming a NULL key indicates an empty slot in your open-addressing
+    // scheme
+    if (map->entries[i].key != NULL && map->entries[i].psl > new_max) {
+      new_max = map->entries[i].psl;
+    }
+  }
+  map->max_psl = new_max;
+}
+
 CDSA_STATUS insert_hashmap(cdsa_hashmap *map, const char *key, void *value) {
   if (map == NULL || key == NULL) {
     return CDSA_ERR_INVALID;
@@ -217,12 +229,23 @@ CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
     // ⚡ FAST PATH: Integer check before string comparison
     if (map->entries[index].hash == raw_hash &&
         strcmp(map->entries[index].key, key) == 0) {
+
+      // Track if the deleted item held the max PSL
+      bool max_psl_affected = (map->entries[index].psl == map->max_psl);
+
       map->size--;
+      map->version++; // Bump version to trigger iterator mutation guards
 
       size_t curr = index;
       size_t next = (curr + 1) % map->capacity;
 
+      // Robin Hood backward shift
       while (map->entries[next].key != NULL && map->entries[next].psl > 0) {
+        // If a shifted item held the max PSL, decrementing it lowers the peak
+        if (map->entries[next].psl == map->max_psl) {
+          max_psl_affected = true;
+        }
+
         map->entries[curr] = map->entries[next];
         map->entries[curr].psl--;
 
@@ -235,6 +258,11 @@ CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
       map->entries[curr].hash = 0;
       map->entries[curr].psl = 0;
 
+      // O(N) recalculation only triggered if the high-water mark was disturbed
+      if (max_psl_affected) {
+        recalculate_max_psl(map);
+      }
+
       return CDSA_OK;
     }
 
@@ -244,7 +272,6 @@ CDSA_STATUS remove_hashmap(cdsa_hashmap *map, const char *key) {
 
   return CDSA_ERR_NOT_FOUND;
 }
-
 // --- Iterator Implementation ---
 
 struct cdsa_hashmap_iterator {
