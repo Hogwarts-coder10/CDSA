@@ -30,8 +30,13 @@ jobs:
       # Now that we know exactly where it compiles, we run it straight from the source
       run: valgrind --leak-check=full --show-leak-kinds=all --error-exitcode=1 ./build-bench/bench_fuzzer
 
-    - name: Run Unit Tests (CTests)
-      run: cd build-bench && ctest --output-on-failure
-      env:
-        CDSA_USE_SANITIZERS: ON
+    - name: Configure Sanitized Build
+      run: cmake -B build-san -DCMAKE_BUILD_TYPE=Debug -DCDSA_USE_SANITIZERS=ON
+
+    - name: Compile Sanitized Suite
+      run: cmake --build build-san
+
+    - name: Run Unit Tests Under ASan/UBSan
+      run: cd build-san && ctest --output-on-failure
+
 

@@ -1,5 +1,6 @@
 build/
 build-bench/
+build-release/
 compile_commands.json
 *.o
 *.a
