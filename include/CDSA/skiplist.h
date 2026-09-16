@@ -18,9 +18,20 @@ void cdsa_free_skiplist(cdsa_skiplist *sl);
 size_t cdsa_size_skiplist(const cdsa_skiplist *sl);
 int level_skiplist(cdsa_skiplist *sl);
 
-// Returns true if inserted, false if it failed (like out of memory)
 /**
- * @brief Inserts a score and value.
+ * @brief Inserts a score and value, enforcing one score per member.
+ *
+ * This is a sorted-set insert, not a plain skip-list insert: each
+ * member string may only appear once. Behavior on a repeat member:
+ * - Same member, same score: no-op, returns CDSA_OK.
+ * - Same member, different score: the old node is removed and a new
+ *   one is inserted at the new score (an internal remove_skiplist +
+ *   insert, same as ZADD updating an existing member).
+ * - New member: inserted normally.
+ *
+ * @param out_is_new Optional (may be NULL). Set to true if this call
+ * added a brand-new member, false if it updated an existing one or
+ * was a no-op. Mirrors ZADD's "number of new elements" semantics.
  *
  * @ownership
  * - VALUE: The library takes ownership by creating an internal deep copy
@@ -29,10 +40,18 @@ int level_skiplist(cdsa_skiplist *sl);
  *   insertion. The library will automatically free the internal copy upon
  * removal.
  */
-CDSA_STATUS insert_skiplist(cdsa_skiplist *sl, double score, const char *value);
+CDSA_STATUS insert_skiplist(cdsa_skiplist *sl, double score, const char *value,
+                            bool *out_is_new);
 
 // Returns true if found and deleted, false if it didn't exist
 CDSA_STATUS remove_skiplist(cdsa_skiplist *sl, double score, const char *value);
+
+/**
+ * @brief O(1) score lookup by member, backed by the internal member index.
+ * @return true if the member exists (out_score is set), false otherwise.
+ */
+bool get_score_skiplist(const cdsa_skiplist *sl, const char *value,
+                        double *out_score);
 
 char **get_range_skiplist(cdsa_skiplist *sl, double min_score, double max_score,
                           int *out_score);
@@ -59,7 +78,7 @@ bool cdsa_has_next_skiplist(cdsa_skiplist_iterator *iter);
  * @param out_value Pointer to store the value string (optional, can be NULL).
  */
 CDSA_STATUS cdsa_next_skiplist(cdsa_skiplist_iterator *iter, double *out_score,
-                          const char **out_value);
+                               const char **out_value);
 
 /**
  * @brief Frees the iterator memory.
