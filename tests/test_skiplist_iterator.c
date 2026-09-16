@@ -7,15 +7,15 @@
 void test_skiplist_iterator() {
   printf("\n=== Testing cdsa_skiplist Iterator ===\n");
 
-  // Create the cdsa_skiplist (adjust arguments if your cdsa_create_skiplist takes
-  // max_level/p)
+  // Create the cdsa_skiplist (adjust arguments if your cdsa_create_skiplist
+  // takes max_level/p)
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
   // 1. Insert data OUT OF ORDER
-  insert_skiplist(sl, 42.5, "Douglas");
-  insert_skiplist(sl, 10.0, "Alice");
-  insert_skiplist(sl, 99.9, "Zebra");
-  insert_skiplist(sl, 25.0, "Bob");
+  insert_skiplist(sl, 42.5, "Douglas", NULL);
+  insert_skiplist(sl, 10.0, "Alice", NULL);
+  insert_skiplist(sl, 99.9, "Zebra", NULL);
+  insert_skiplist(sl, 25.0, "Bob", NULL);
 
   // 2. Read the data using the Iterator
   cdsa_skiplist_iterator *iter = cdsa_create_skiplist_iterator(sl);
