@@ -105,7 +105,7 @@ void bench_skiplist_insert(void) {
   for (int i = 0; i < NUM_OPS; i++) {
     snprintf(key, sizeof(key), "key:%d", i);
     // Casting i to double for the score
-    insert_skiplist(sl, (double)i, key);
+    insert_skiplist(sl, (double)i, key, NULL);
   }
   double duration = get_time_sec() - start;
 
