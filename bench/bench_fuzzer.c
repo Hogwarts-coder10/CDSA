@@ -67,7 +67,7 @@ int main(void) {
       /* Inserts */
       cdsa_insert_art(art, key_pool[idx], (void *)(intptr_t)val);
       insert_hashmap(map, key_pool[idx], (void *)(intptr_t)val);
-      insert_skiplist(list, (double)val, key_pool[idx], NULL);
+      insert_skiplist(list, (double)val, key_pool[idx]);
     } else if (op < 70) {
       /* Searches */
       cdsa_search_art(art, key_pool[idx]);
