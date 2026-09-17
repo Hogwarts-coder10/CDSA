@@ -37,13 +37,13 @@ static void test_basic_insert_and_size() {
   printf("[*] test_basic_insert_and_size\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  assert(insert_skiplist(sl, 1.0, "alpha", NULL) == CDSA_OK);
+  assert(insert_skiplist(sl, 1.0, "alpha") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 1);
 
-  assert(insert_skiplist(sl, 2.0, "beta", NULL) == CDSA_OK);
+  assert(insert_skiplist(sl, 2.0, "beta") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 2);
 
-  assert(insert_skiplist(sl, 3.0, "gamma", NULL) == CDSA_OK);
+  assert(insert_skiplist(sl, 3.0, "gamma") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 3);
 
   cdsa_free_skiplist(sl);
@@ -54,9 +54,9 @@ static void test_delete_existing() {
   printf("[*] test_delete_existing\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 10.0, "alice", NULL);
-  insert_skiplist(sl, 20.0, "bob", NULL);
-  insert_skiplist(sl, 30.0, "charlie", NULL);
+  insert_skiplist(sl, 10.0, "alice");
+  insert_skiplist(sl, 20.0, "bob");
+  insert_skiplist(sl, 30.0, "charlie");
 
   assert(remove_skiplist(sl, 20.0, "bob") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 2);
@@ -78,7 +78,7 @@ static void test_delete_nonexistent() {
   printf("[*] test_delete_nonexistent\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 5.0, "x", NULL);
+  insert_skiplist(sl, 5.0, "x");
   assert(remove_skiplist(sl, 9999.0, "ghost") != CDSA_OK);
   assert(remove_skiplist(sl, 5.0, "wrong_value") != CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 1); // nothing was actually removed
@@ -91,12 +91,12 @@ static void test_delete_then_reinsert() {
   printf("[*] test_delete_then_reinsert\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 1.0, "ping", NULL);
+  insert_skiplist(sl, 1.0, "ping");
   assert(remove_skiplist(sl, 1.0, "ping") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 0);
 
   // reinsert same key — should work fine
-  assert(insert_skiplist(sl, 1.0, "ping", NULL) == CDSA_OK);
+  assert(insert_skiplist(sl, 1.0, "ping") == CDSA_OK);
   assert(cdsa_size_skiplist(sl) == 1);
 
   int count = 0;
@@ -114,10 +114,10 @@ static void test_tied_scores_alphabetical_order() {
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
   // All same score — skiplist must fall back to alphabetical (like Redis ZADD)
-  insert_skiplist(sl, 1500.0, "Karthik", NULL);
-  insert_skiplist(sl, 1500.0, "Alice", NULL);
-  insert_skiplist(sl, 1500.0, "Charlie", NULL);
-  insert_skiplist(sl, 1500.0, "Bob", NULL);
+  insert_skiplist(sl, 1500.0, "Karthik");
+  insert_skiplist(sl, 1500.0, "Alice");
+  insert_skiplist(sl, 1500.0, "Charlie");
+  insert_skiplist(sl, 1500.0, "Bob");
 
   assert(cdsa_size_skiplist(sl) == 4);
 
@@ -139,9 +139,9 @@ static void test_range_query_basic() {
   printf("[*] test_range_query_basic\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 100.0, "low", NULL);
-  insert_skiplist(sl, 500.0, "mid", NULL);
-  insert_skiplist(sl, 900.0, "high", NULL);
+  insert_skiplist(sl, 100.0, "low");
+  insert_skiplist(sl, 500.0, "mid");
+  insert_skiplist(sl, 900.0, "high");
 
   int count = 0;
   char **r = get_range_skiplist(sl, 200.0, 800.0, &count);
@@ -157,9 +157,9 @@ static void test_range_query_inclusive_bounds() {
   printf("[*] test_range_query_inclusive_bounds\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 1.0, "a", NULL);
-  insert_skiplist(sl, 2.0, "b", NULL);
-  insert_skiplist(sl, 3.0, "c", NULL);
+  insert_skiplist(sl, 1.0, "a");
+  insert_skiplist(sl, 2.0, "b");
+  insert_skiplist(sl, 3.0, "c");
 
   // exact boundary hits
   int count = 0;
@@ -181,8 +181,8 @@ static void test_range_query_empty_result() {
   printf("[*] test_range_query_empty_result\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 1.0, "a", NULL);
-  insert_skiplist(sl, 2.0, "b", NULL);
+  insert_skiplist(sl, 1.0, "a");
+  insert_skiplist(sl, 2.0, "b");
 
   int count = 999; // sentinel
   char **r = get_range_skiplist(sl, 50.0, 100.0, &count);
@@ -197,11 +197,11 @@ static void test_range_query_all() {
   printf("[*] test_range_query_all\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 1.0, "a", NULL);
-  insert_skiplist(sl, 2.0, "b", NULL);
-  insert_skiplist(sl, 3.0, "c", NULL);
-  insert_skiplist(sl, 4.0, "d", NULL);
-  insert_skiplist(sl, 5.0, "e", NULL);
+  insert_skiplist(sl, 1.0, "a");
+  insert_skiplist(sl, 2.0, "b");
+  insert_skiplist(sl, 3.0, "c");
+  insert_skiplist(sl, 4.0, "d");
+  insert_skiplist(sl, 5.0, "e");
 
   int count = 0;
   char **r = get_range_skiplist(sl, 0.0, 999.0, &count);
@@ -222,7 +222,7 @@ static void test_level_shrinks_after_delete() {
   for (int i = 0; i < 50; i++) {
     char buf[16];
     snprintf(buf, sizeof(buf), "key%d", i);
-    insert_skiplist(sl, (double)i, buf, NULL);
+    insert_skiplist(sl, (double)i, buf);
   }
   assert(cdsa_size_skiplist(sl) == 50);
 
@@ -245,7 +245,7 @@ static void test_insert_delete_churn() {
 
   // Repeated insert/delete of the same key — verifies no leak or corruption
   for (int i = 0; i < 500; i++) {
-    assert(insert_skiplist(sl, 1.0, "churn", NULL) == CDSA_OK);
+    assert(insert_skiplist(sl, 1.0, "churn") == CDSA_OK);
     assert(cdsa_size_skiplist(sl) == 1);
     assert(remove_skiplist(sl, 1.0, "churn") == CDSA_OK);
     assert(cdsa_size_skiplist(sl) == 0);
@@ -265,7 +265,7 @@ static void test_range_caller_owns_strings() {
   printf("[*] test_range_caller_owns_strings\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 1.0, "original", NULL);
+  insert_skiplist(sl, 1.0, "original");
 
   int count = 0;
   char **r = get_range_skiplist(sl, 0.0, 10.0, &count);
@@ -286,9 +286,9 @@ static void test_kedis_style_namespaced_keys() {
   printf("[*] test_kedis_style_namespaced_keys\n");
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
-  insert_skiplist(sl, 1.0, "session:user:12345:auth_token", NULL);
-  insert_skiplist(sl, 2.0, "session:user:12345:refresh_token", NULL);
-  insert_skiplist(sl, 3.0, "session:user:99999:auth_token", NULL);
+  insert_skiplist(sl, 1.0, "session:user:12345:auth_token");
+  insert_skiplist(sl, 2.0, "session:user:12345:refresh_token");
+  insert_skiplist(sl, 3.0, "session:user:99999:auth_token");
 
   assert(cdsa_size_skiplist(sl) == 3);
 

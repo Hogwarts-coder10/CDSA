@@ -1,7 +1,6 @@
 #include "CDSA/skiplist.h"
 #include "CDSA/allocator.h"
 #include "CDSA/error.h"
-#include "CDSA/hashmap.h"
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,13 +18,6 @@ struct cdsa_skiplist {
   int level;        // current highest level in use
   size_t size;      // total number of items
   size_t version;   // Mutation Counter
-
-  // member -> SkipNode*. Lets us answer "does this member already
-  // exist, and at what score" in O(1) instead of an O(N) scan, since
-  // the skip list itself is only ordered by score, not by member.
-  // The key stored here is always the SAME pointer as the owning
-  // node's `value` field — one strdup per member, not two.
-  cdsa_hashmap *member_index;
 };
 
 // --- Internal Helpers ---
@@ -92,15 +84,6 @@ cdsa_skiplist *cdsa_create_skiplist() {
     return NULL;
   }
 
-  sl->member_index = cdsa_create_hashmap(16);
-  if (sl->member_index == NULL) {
-    CDSA_FREE(sl->header->value);
-    CDSA_FREE(sl->header->forward);
-    CDSA_FREE(sl->header);
-    CDSA_FREE(sl);
-    return NULL;
-  }
-
   return sl;
 }
 
@@ -116,12 +99,6 @@ void cdsa_free_skiplist(cdsa_skiplist *sl) {
     CDSA_FREE(current);
     current = next;
   }
-
-  // member_index's keys are the same pointers as each node's `value`,
-  // already freed above. cdsa_free_hashmap never touches its keys
-  // (it only owns the bucket array itself), so this order is safe.
-  cdsa_free_hashmap(sl->member_index);
-
   CDSA_FREE(sl);
 }
 
@@ -139,10 +116,12 @@ int level_skiplist(cdsa_skiplist *sl) {
   return sl->level;
 }
 
-// The actual splice-in logic, shared by insert_skiplist for both the
-// fresh-member case and the re-insert-after-score-change case.
-static CDSA_STATUS splice_in_new_node(cdsa_skiplist *sl, double score,
-                                      const char *value) {
+CDSA_STATUS insert_skiplist(cdsa_skiplist *sl, double score,
+                            const char *value) {
+  if (sl == NULL || value == NULL) {
+    return CDSA_ERR_INVALID;
+  }
+
   SkipNode *current = sl->header;
 
   // Breadcrumb trail: remembers the last node we saw at each level before
@@ -188,61 +167,9 @@ static CDSA_STATUS splice_in_new_node(cdsa_skiplist *sl, double score,
     update[i]->forward[i] = new_node;
   }
 
-  // Index the new node by member so future lookups/uniqueness checks
-  // are O(1). Reuses new_node->value as the key — one strdup, not two.
-  CDSA_STATUS idx_status =
-      insert_hashmap(sl->member_index, new_node->value, new_node);
-  if (idx_status != CDSA_OK) {
-    // Indexing failed (almost certainly OOM). Unwind the splice so the
-    // skip list and the index don't disagree about what exists.
-    for (int i = 0; i < new_level; i++) {
-      update[i]->forward[i] = new_node->forward[i];
-    }
-    sl->level = old_level;
-    CDSA_FREE(new_node->value);
-    CDSA_FREE(new_node->forward);
-    CDSA_FREE(new_node);
-    return idx_status;
-  }
-
   sl->size++;
   sl->version++;
   return CDSA_OK;
-}
-
-CDSA_STATUS insert_skiplist(cdsa_skiplist *sl, double score, const char *value,
-                            bool *out_is_new) {
-  if (sl == NULL || value == NULL) {
-    return CDSA_ERR_INVALID;
-  }
-
-  if (out_is_new != NULL) {
-    *out_is_new = false;
-  }
-
-  // O(1) check: has this member already been inserted, and at what score?
-  void *existing = get_hashmap(sl->member_index, value);
-  if (existing != NULL) {
-    SkipNode *existing_node = (SkipNode *)existing;
-    if (existing_node->score == score) {
-      // Same member, same score — nothing to do.
-      return CDSA_OK;
-    }
-    // Same member, new score: remove the old node (this also strips
-    // it from member_index) before re-inserting at the new score.
-    CDSA_STATUS rm_status = remove_skiplist(sl, existing_node->score, value);
-    if (rm_status != CDSA_OK) {
-      return rm_status;
-    }
-    return splice_in_new_node(sl, score, value);
-  }
-
-  // Brand-new member.
-  CDSA_STATUS status = splice_in_new_node(sl, score, value);
-  if (status == CDSA_OK && out_is_new != NULL) {
-    *out_is_new = true;
-  }
-  return status;
 }
 
 CDSA_STATUS remove_skiplist(cdsa_skiplist *sl, double score,
@@ -273,10 +200,6 @@ CDSA_STATUS remove_skiplist(cdsa_skiplist *sl, double score,
   if (current != NULL && current->score == score &&
       strcmp(current->value, value) == 0) {
 
-    // Strip it from the member index first, while current->value is
-    // still valid memory (remove_hashmap compares by string content).
-    remove_hashmap(sl->member_index, value);
-
     // 3. Rewire the pointers across all levels the node existed on
     for (int i = 0; i < sl->level; i++) {
       // If the breadcrumb at this level doesn't point to our target, stop
@@ -305,24 +228,6 @@ CDSA_STATUS remove_skiplist(cdsa_skiplist *sl, double score,
   }
 
   return CDSA_ERR_NOT_FOUND; // Node didn't exist
-}
-
-bool get_score_skiplist(const cdsa_skiplist *sl, const char *value,
-                        double *out_score) {
-  if (sl == NULL || value == NULL) {
-    return false;
-  }
-
-  // O(1) via the member index — no skip-list walk needed.
-  void *found = get_hashmap(sl->member_index, value);
-  if (found == NULL) {
-    return false;
-  }
-
-  if (out_score != NULL) {
-    *out_score = ((SkipNode *)found)->score;
-  }
-  return true;
 }
 
 char **get_range_skiplist(cdsa_skiplist *sl, double min_score, double max_score,

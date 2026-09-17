@@ -12,10 +12,10 @@ void test_skiplist_iterator() {
   cdsa_skiplist *sl = cdsa_create_skiplist();
 
   // 1. Insert data OUT OF ORDER
-  insert_skiplist(sl, 42.5, "Douglas", NULL);
-  insert_skiplist(sl, 10.0, "Alice", NULL);
-  insert_skiplist(sl, 99.9, "Zebra", NULL);
-  insert_skiplist(sl, 25.0, "Bob", NULL);
+  insert_skiplist(sl, 42.5, "Douglas");
+  insert_skiplist(sl, 10.0, "Alice");
+  insert_skiplist(sl, 99.9, "Zebra");
+  insert_skiplist(sl, 25.0, "Bob");
 
   // 2. Read the data using the Iterator
   cdsa_skiplist_iterator *iter = cdsa_create_skiplist_iterator(sl);
